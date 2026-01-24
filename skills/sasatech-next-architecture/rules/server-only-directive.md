@@ -55,6 +55,7 @@ export const productRepository = {
 |---------|-------------|
 | `service.ts` | 必須 |
 | `repository.ts` | 必須 |
+| `handler.ts` | 必須 |
 | `schema.ts` | 付けない（フロントエンドでも使用） |
 | `fetcher.ts` | 付けない（クライアント専用） |
 | `hooks.ts` | 付けない（クライアント専用） |
