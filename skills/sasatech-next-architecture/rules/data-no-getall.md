@@ -9,7 +9,7 @@ tags: data-access, pagination, security, repository
 
 Repository層で上限なしの全件取得を行わない。必ずサーバー側で上限を強制する。
 
-**Incorrect (上限なし、データ量増加でメモリ枯渇):**
+**NG (上限なし、データ量増加でメモリ枯渇):**
 
 ```typescript
 // 上限なし - データ量増加でメモリ枯渇
@@ -25,7 +25,7 @@ async findMany(supabase: SupabaseClient, limit: number) {
 }
 ```
 
-**Correct (MAX_LIMIT でサーバー側上限を強制):**
+**OK (MAX_LIMIT でサーバー側上限を強制):**
 
 ```typescript
 const MAX_LIMIT = 100

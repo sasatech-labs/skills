@@ -9,7 +9,7 @@ tags: server, security, supabase, architecture
 
 クライアントコンポーネントから Supabase を直接使用しない。必ず API Route を経由する。
 
-**Incorrect (環境変数がクライアントに露出):**
+**NG (環境変数がクライアントに露出):**
 
 ```typescript
 // src/features/products/components/product-list.tsx
@@ -33,7 +33,7 @@ export function ProductList() {
 }
 ```
 
-**Correct (Hook + Fetcher + API Route でデータ取得):**
+**OK (Hook + Fetcher + API Route でデータ取得):**
 
 ```typescript
 // src/features/products/components/product-list.tsx

@@ -9,7 +9,7 @@ tags: architecture, layers, handler, service, repository
 
 API Route から Supabase まで、必ず3層を経由する。
 
-**Incorrect (Handler から直接 DB アクセス、責務が混在):**
+**NG (Handler から直接 DB アクセス、責務が混在):**
 
 ```typescript
 // API Route から直接 Supabase にアクセス
@@ -32,7 +32,7 @@ export async function getProducts(supabase: SupabaseClient) {
 }
 ```
 
-**Correct (Handler → Service → Repository を経由):**
+**OK (Handler → Service → Repository を経由):**
 
 ```typescript
 // Handler層: src/app/api/products/route.ts

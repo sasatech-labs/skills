@@ -9,7 +9,7 @@ tags: schema, types, feature-structure
 
 Feature ディレクトリ内に `types.ts` を作成しない。型定義は `schema.ts` に集約する。
 
-**Incorrect (types.ts を作成、型が重複):**
+**NG (types.ts を作成、型が重複):**
 
 ```
 src/features/products/
@@ -34,7 +34,7 @@ export type CreateProductInput = {
 }
 ```
 
-**Correct (schema.ts のみ、Single Source of Truth):**
+**OK (schema.ts のみ、Single Source of Truth):**
 
 ```
 src/features/products/

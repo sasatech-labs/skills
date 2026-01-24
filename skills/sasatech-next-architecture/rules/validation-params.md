@@ -9,7 +9,7 @@ tags: validation, zod, handler, api
 
 動的ルートのパラメータは Zod スキーマでバリデーションする。
 
-**Incorrect (バリデーションなし、不正な ID でクエリ実行):**
+**NG (バリデーションなし、不正な ID でクエリ実行):**
 
 ```typescript
 // src/app/api/products/[id]/route.ts
@@ -25,7 +25,7 @@ export async function GET(
 }
 ```
 
-**Correct (validateParams で UUID 形式を検証):**
+**OK (validateParams で UUID 形式を検証):**
 
 ```typescript
 import { validateParams } from '@/lib/validation'

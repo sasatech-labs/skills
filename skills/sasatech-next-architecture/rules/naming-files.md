@@ -9,7 +9,7 @@ tags: naming, files, directory, convention
 
 すべてのファイル名・ディレクトリ名は **kebab-case** を使用する。
 
-**Incorrect (PascalCase/snake_case/camelCase が混在):**
+**NG (PascalCase/snake_case/camelCase が混在):**
 
 ```
 src/features/
@@ -22,7 +22,7 @@ src/components/
 └── productList.tsx           # camelCase
 ```
 
-**Correct (全て kebab-case で統一):**
+**OK (全て kebab-case で統一):**
 
 ```
 src/features/

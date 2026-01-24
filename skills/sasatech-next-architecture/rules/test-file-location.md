@@ -9,7 +9,7 @@ tags: testing, structure, organization
 
 テストファイルはソースファイルと同階層の `__tests__` ディレクトリに配置。
 
-**Incorrect (ソースと混在、ディレクトリが散らかる):**
+**NG (ソースと混在、ディレクトリが散らかる):**
 
 ```
 src/features/products/
@@ -19,7 +19,7 @@ src/features/products/
 └── repository.test.ts  # ソースと混在
 ```
 
-**Correct (__tests__ に分離、ソースがすっきり):**
+**OK (__tests__ に分離、ソースがすっきり):**
 
 ```
 src/features/products/

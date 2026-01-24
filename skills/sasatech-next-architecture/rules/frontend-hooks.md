@@ -9,7 +9,7 @@ tags: frontend, hooks, swr, client
 
 Feature ごとに `hooks.ts` を作成し、SWR を使用したデータフェッチ Hook を提供する。
 
-**Incorrect (コンポーネント内で複雑な状態管理):**
+**NG (コンポーネント内で複雑な状態管理):**
 
 ```typescript
 // コンポーネント内で複雑な状態管理
@@ -30,7 +30,7 @@ export function ProductList() {
 }
 ```
 
-**Correct (SWR Hook でキャッシュ・重複排除・自動再検証):**
+**OK (SWR Hook でキャッシュ・重複排除・自動再検証):**
 
 ```typescript
 // src/features/products/hooks.ts
