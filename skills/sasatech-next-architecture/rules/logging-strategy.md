@@ -9,7 +9,7 @@ tags: logging, pino, observability, debugging
 
 pino を使用して構造化ログを出力する。console.log は使用しない。
 
-**Incorrect (console.log を使用、情報が不足):**
+**NG (console.log を使用、情報が不足):**
 
 ```typescript
 // Handler
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Correct (pino で構造化ログ):**
+**OK (pino で構造化ログ):**
 
 ```typescript
 import { logger } from '@/lib/logger'

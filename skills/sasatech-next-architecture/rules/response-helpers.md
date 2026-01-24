@@ -9,7 +9,7 @@ tags: response, api, handler
 
 Handler 層では直接 `NextResponse.json()` を使わず、レスポンスヘルパーを使用する。
 
-**Incorrect (直接 NextResponse、形式が不統一になりやすい):**
+**NG (直接 NextResponse、形式が不統一になりやすい):**
 
 ```typescript
 export async function GET(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Correct (ヘルパーで統一された形式):**
+**OK (ヘルパーで統一された形式):**
 
 ```typescript
 import { ok, created, notFound, serverError } from '@/lib/api-response'

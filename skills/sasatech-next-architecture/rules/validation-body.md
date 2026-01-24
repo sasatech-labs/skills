@@ -9,7 +9,7 @@ tags: validation, zod, handler, api
 
 POST/PATCH リクエストのボディは必ず Zod スキーマでバリデーションする。
 
-**Incorrect (バリデーションなし、不正な入力がそのまま処理される):**
+**NG (バリデーションなし、不正な入力がそのまま処理される):**
 
 ```typescript
 export async function POST(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Correct (validateBody で型安全にバリデーション):**
+**OK (validateBody で型安全にバリデーション):**
 
 ```typescript
 import { validateBody } from '@/lib/validation'

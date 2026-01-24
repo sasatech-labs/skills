@@ -38,7 +38,7 @@ Supabase の接続情報や API キーなど、機密性のある環境変数に
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe 公開鍵 |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN（公開可） |
 
-**Incorrect (機密情報がクライアントバンドルに含まれる):**
+**NG (機密情報がクライアントバンドルに含まれる):**
 
 ```bash
 # .env.local - NG
@@ -55,7 +55,7 @@ const supabase = createBrowserClient(
 )
 ```
 
-**Correct (機密情報はサーバー専用、公開情報のみ NEXT_PUBLIC_):**
+**OK (機密情報はサーバー専用、公開情報のみ NEXT_PUBLIC_):**
 
 ```bash
 # .env.local

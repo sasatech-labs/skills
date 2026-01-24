@@ -9,7 +9,7 @@ tags: frontend, fetcher, api, client
 
 Feature ごとに `fetcher.ts` を作成し、API 呼び出しを一元化する。
 
-**Incorrect (コンポーネントで直接 fetch、エラー処理が分散):**
+**NG (コンポーネントで直接 fetch、エラー処理が分散):**
 
 ```typescript
 // src/features/products/components/product-list.tsx
@@ -29,7 +29,7 @@ export function ProductList() {
 }
 ```
 
-**Correct (Fetcher で API 呼び出しを一元化):**
+**OK (Fetcher で API 呼び出しを一元化):**
 
 ```typescript
 // src/features/products/fetcher.ts

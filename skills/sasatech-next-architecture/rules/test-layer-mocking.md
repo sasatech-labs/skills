@@ -9,7 +9,7 @@ tags: testing, mocking, layers
 
 テスト対象レイヤーの直下の依存のみをモックする。
 
-**Incorrect (Service テストで Supabase を直接モック、責務が不明確):**
+**NG (Service テストで Supabase を直接モック、責務が不明確):**
 
 ```typescript
 // Service のテストで Supabase を直接モック
@@ -30,7 +30,7 @@ it('商品一覧を返す', async () => {
 })
 ```
 
-**Correct (Service テストでは Repository をモック):**
+**OK (Service テストでは Repository をモック):**
 
 ```typescript
 // Service のテストでは Repository をモック

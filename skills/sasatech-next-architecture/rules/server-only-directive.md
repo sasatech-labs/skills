@@ -9,7 +9,7 @@ tags: server, security, next-js, bundling
 
 Service層とRepository層のファイルには必ず `import 'server-only'` を記述する。
 
-**Incorrect (クライアントバンドルに混入する可能性):**
+**NG (クライアントバンドルに混入する可能性):**
 
 ```typescript
 // src/features/products/service.ts
@@ -22,7 +22,7 @@ export async function getProducts(supabase: SupabaseClient) {
 }
 ```
 
-**Correct (server-only でビルド時に誤使用を検出):**
+**OK (server-only でビルド時に誤使用を検出):**
 
 ```typescript
 // src/features/products/service.ts

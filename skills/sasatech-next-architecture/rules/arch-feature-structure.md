@@ -9,7 +9,7 @@ tags: architecture, feature, module, directory-structure
 
 機能ごとに `features/` ディレクトリにモジュールを作成し、公開 API を `index.ts` で制御する。
 
-**Incorrect (機能が分散、関連ファイルの把握が困難):**
+**NG (機能が分散、関連ファイルの把握が困難):**
 
 ```
 src/
@@ -27,7 +27,7 @@ src/
     └── user-types.ts
 ```
 
-**Correct (機能単位でまとめ、index.ts で公開 API を制御):**
+**OK (機能単位でまとめ、index.ts で公開 API を制御):**
 
 ```
 src/features/

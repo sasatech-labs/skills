@@ -9,7 +9,7 @@ tags: data-access, pagination, repository, api
 
 リスト取得APIは必ずページネーションを実装する。
 
-**Incorrect (全件返却、大量データでレスポンス遅延):**
+**NG (全件返却、大量データでレスポンス遅延):**
 
 ```typescript
 // Handler
@@ -26,7 +26,7 @@ async findMany(supabase: SupabaseClient): Promise<Product[]> {
 }
 ```
 
-**Correct (ページネーション付きで総件数を返却):**
+**OK (ページネーション付きで総件数を返却):**
 
 ```typescript
 // Handler

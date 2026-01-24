@@ -9,7 +9,7 @@ tags: error, exception, service, repository
 
 Service 層と Repository 層では `AppError` クラスでエラーをスローする。
 
-**Incorrect (生の Error、HTTP ステータスコードが伝わらない):**
+**NG (生の Error、HTTP ステータスコードが伝わらない):**
 
 ```typescript
 // Repository
@@ -36,7 +36,7 @@ async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
 }
 ```
 
-**Correct (AppError で HTTP ステータスコードとエラーコードを伝播):**
+**OK (AppError で HTTP ステータスコードとエラーコードを伝播):**
 
 ```typescript
 import { AppError } from '@/lib/errors'

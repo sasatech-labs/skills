@@ -9,7 +9,7 @@ tags: testing, naming, readability
 
 describe/it の記述は日本語で、テストの意図を明確に。
 
-**Incorrect (意図が不明確、何をテストしているか分からない):**
+**NG (意図が不明確、何をテストしているか分からない):**
 
 ```typescript
 // 何をテストしているか分からない
@@ -27,7 +27,7 @@ describe('getProducts', () => {
 })
 ```
 
-**Correct (振る舞いを日本語で記述):**
+**OK (振る舞いを日本語で記述):**
 
 ```typescript
 // 振る舞いを日本語で記述

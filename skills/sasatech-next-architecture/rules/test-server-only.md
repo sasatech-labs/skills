@@ -9,7 +9,7 @@ tags: testing, server-only, setup
 
 `server-only` パッケージはテスト環境では無効化が必要。
 
-**Incorrect (モックなし、テスト実行時にエラー):**
+**NG (モックなし、テスト実行時にエラー):**
 
 ```typescript
 // vitest.setup.ts
@@ -19,7 +19,7 @@ tags: testing, server-only, setup
 // Error: This module cannot be imported from a Client Component module.
 ```
 
-**Correct (vitest.setup.ts でグローバルにモック):**
+**OK (vitest.setup.ts でグローバルにモック):**
 
 ```typescript
 // vitest.setup.ts

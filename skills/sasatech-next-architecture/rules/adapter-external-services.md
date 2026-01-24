@@ -9,7 +9,7 @@ tags: architecture, adapter, external-api, stripe, resend
 
 外部サービス（Stripe、Resend、OpenAI など）への依存は `lib/adapters/` に配置し、Service 層から利用する。
 
-**Incorrect (Service で直接 SDK を使用、依存が密結合):**
+**NG (Service で直接 SDK を使用、依存が密結合):**
 
 ```typescript
 // src/features/payments/core/service.ts
@@ -27,7 +27,7 @@ export async function createPaymentIntent(amount: number) {
 }
 ```
 
-**Correct (Adapter で外部依存を隔離、テスト容易):**
+**OK (Adapter で外部依存を隔離、テスト容易):**
 
 ```typescript
 // src/lib/adapters/stripe/index.ts

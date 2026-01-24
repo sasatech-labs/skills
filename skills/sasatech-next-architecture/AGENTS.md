@@ -56,13 +56,13 @@ Handler (API Route) → Service → Repository → Supabase
 Never use unlimited data fetching. Always enforce server-side limits.
 
 ```typescript
-// Incorrect
+// NG
 async findAll(supabase: SupabaseClient): Promise<Product[]> {
   const { data } = await supabase.from('products').select('*')
   return data
 }
 
-// Correct
+// OK
 const MAX_LIMIT = 100
 
 async findMany(
@@ -87,7 +87,7 @@ async findMany(
 All list endpoints must include pagination.
 
 ```typescript
-// Correct response structure
+// OK response structure
 {
   "data": [...],
   "pagination": {
@@ -124,11 +124,11 @@ Files that need `server-only`:
 Environment variables must not use `NEXT_PUBLIC_` prefix.
 
 ```bash
-# Incorrect
+# NG
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
-# Correct
+# OK
 SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
@@ -139,12 +139,12 @@ SUPABASE_SERVICE_ROLE_KEY=...
 Client components must not access Supabase directly. Always go through API routes.
 
 ```typescript
-// Incorrect - Direct Supabase in client
+// NG - Direct Supabase in client
 'use client'
 const supabase = createBrowserClient(...)
 const { data } = await supabase.from('products').select('*')
 
-// Correct - Through API route
+// OK - Through API route
 'use client'
 const { products } = useProducts()  // Hook calls API
 ```
@@ -186,13 +186,13 @@ Never create `types.ts` in feature directories. Use:
 Derive input types from Zod schemas, don't define manually.
 
 ```typescript
-// Incorrect
+// NG
 export type CreateProductInput = {
   name: string
   price: number
 }
 
-// Correct
+// OK
 export const createProductSchema = z.object({
   name: z.string(),
   price: z.number(),
@@ -209,14 +209,14 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>
 Always go through all three layers. Never skip.
 
 ```typescript
-// Incorrect - Handler directly accesses DB
+// NG - Handler directly accesses DB
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data } = await supabase.from('products').select('*')
   return NextResponse.json(data)
 }
 
-// Correct - Through all layers
+// OK - Through all layers
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const products = await getProducts(supabase)  // Service
@@ -229,11 +229,11 @@ export async function GET(request: NextRequest) {
 Organize code by feature, not by type.
 
 ```
-// Incorrect - Organized by type
+// NG - Organized by type
 src/services/product-service.ts
 src/repositories/product-repository.ts
 
-// Correct - Organized by feature
+// OK - Organized by feature
 src/features/products/
 ├── index.ts
 ├── core/
@@ -282,11 +282,11 @@ export async function GET(
 Use `ok()`, `created()`, `notFound()` instead of raw `NextResponse.json()`.
 
 ```typescript
-// Incorrect
+// NG
 return NextResponse.json(product)
 return NextResponse.json(product, { status: 201 })
 
-// Correct
+// OK
 return ok(product)
 return created(product)
 return notFound('Product not found')
@@ -297,10 +297,10 @@ return notFound('Product not found')
 Throw `AppError` instead of raw `Error`.
 
 ```typescript
-// Incorrect
+// NG
 throw new Error('Not found')
 
-// Correct
+// OK
 throw AppError.notFound('Product not found')
 throw AppError.forbidden('Cannot edit others posts')
 throw new AppError('Custom error', 400, 'CUSTOM_CODE')
@@ -311,12 +311,12 @@ throw new AppError('Custom error', 400, 'CUSTOM_CODE')
 All files and directories use kebab-case.
 
 ```
-// Incorrect
+// NG
 UserProfile.tsx
 productList.tsx
 UserService.ts
 
-// Correct
+// OK
 user-profile.tsx
 product-list.tsx
 service.ts

@@ -9,7 +9,7 @@ tags: schema, types, zod, validation
 
 Input 型は Zod スキーマから `z.infer` で導出する。手動で型定義しない。
 
-**Incorrect (手動で型定義、スキーマと乖離するリスク):**
+**NG (手動で型定義、スキーマと乖離するリスク):**
 
 ```typescript
 // schema.ts
@@ -27,7 +27,7 @@ export type CreateProductInput = {
 }
 ```
 
-**Correct (z.infer で自動導出、常に同期):**
+**OK (z.infer で自動導出、常に同期):**
 
 ```typescript
 // schema.ts
@@ -45,7 +45,7 @@ export type CreateProductInput = z.infer<typeof createProductSchema>
 
 `partial()` を使用して重複を避ける:
 
-**Incorrect (重複定義、変更時に両方を修正必要):**
+**NG (重複定義、変更時に両方を修正必要):**
 
 ```typescript
 // create と update で同じフィールドを2回定義
@@ -60,7 +60,7 @@ export const updateProductSchema = z.object({
 })
 ```
 
-**Correct (partial() で再利用):**
+**OK (partial() で再利用):**
 
 ```typescript
 // create スキーマを再利用

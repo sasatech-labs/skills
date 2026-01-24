@@ -9,7 +9,7 @@ tags: schema, types, zod, feature-structure
 
 Feature 内の型定義は `schema.ts` に集約する。`types.ts` は作成しない。
 
-**Incorrect (型定義が分散、同期が困難):**
+**NG (型定義が分散、同期が困難):**
 
 ```
 src/features/products/
@@ -39,7 +39,7 @@ export type CreateProductInput = {
 }
 ```
 
-**Correct (schema.ts に一元化、Zod から型導出):**
+**OK (schema.ts に一元化、Zod から型導出):**
 
 ```
 src/features/products/
