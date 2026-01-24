@@ -1,7 +1,6 @@
 ## README.md
 
-- SasaTechで使用するSkillをまとめています
-- Skillsは日本語をベースに作成されています
+- 日本語しかサポートしていません
 
 ## install
 `npx skills add sasatech-labs/skills`
