@@ -4,19 +4,24 @@ Feature-based Clean Architecture の全体設計。
 
 ## レイヤー構成
 
-Handler → Service → Repository / Adapter のアーキテクチャ。
+route.ts → Handler → Service → Repository / Adapter のアーキテクチャ。
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  app/api/          Handler層 (API Route)               │
-│                    - リクエスト/レスポンス処理          │
+│  app/api/          route.ts (Next.js ルーティング)      │
+│                    - handler を re-export するだけ      │
+└─────────────────────────┬───────────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────────┐
+│  features/*/       Handler層                            │
+│  handler.ts        - リクエスト/レスポンス処理          │
 │                    - バリデーション                     │
 │                    - 認証チェック                       │
 └─────────────────────────┬───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
 │  features/*/       Service層                            │
-│                    - ビジネスロジック                   │
+│  service.ts        - ビジネスロジック                   │
 │                    - Repository / Adapter を使用       │
 └───────────┬─────────────────────────┬───────────────────┘
             │                         │
@@ -31,17 +36,42 @@ Handler → Service → Repository / Adapter のアーキテクチャ。
 **Repository**: 内部データストア（Supabase）へのアクセス
 **Adapter**: 外部サービス（決済、メール、AI等）への連携
 
-## Handler (API Route)
+## route.ts と handler.ts の違い
+
+- **route.ts** - Next.js App Router のルーティングファイル。handler を re-export するだけ
+- **handler.ts** - 実際の Handler 層。features 内に配置
+
+### なぜ分けるのか
+
+1. **テスタビリティ** - handler.ts は通常の関数としてユニットテスト可能
+2. **凝集性** - 機能に関するコードが features 内で完結
+3. **一貫性** - すべてのサーバーロジックが features 内にある
+
+## route.ts
+
+handler を re-export するだけの薄いレイヤー。
+
+```typescript
+// src/app/api/products/route.ts
+export { GET, POST } from '@/features/products/core/handler'
+```
+
+```typescript
+// src/app/api/products/[id]/route.ts
+export { GET, PATCH, DELETE } from '@/features/products/core/handler'
+```
+
+## Handler
 
 リクエスト/レスポンスの処理。バリデーションと認証を担当。
 
 ```typescript
-// src/app/api/products/route.ts
+// src/features/products/core/handler.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
-import { getProducts, createProduct } from '@/features/products'
-import { createProductSchema } from '@/features/products/core/schema'
+import { getProducts, createProduct } from './service'
+import { createProductSchema } from './schema'
 import { createClient } from '@/lib/supabase/server'
 import { ok, created, serverError } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
@@ -75,11 +105,11 @@ export async function POST(request: NextRequest) {
 ### ネストしたルートの例
 
 ```typescript
-// src/app/api/products/[id]/reviews/route.ts
+// src/features/products/reviews/handler.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
-import { getReviews, createReview } from '@/features/products/reviews'
+import { getReviews, createReview } from './service'
 import { createClient } from '@/lib/supabase/server'
 import { ok } from '@/lib/api-response'
 
@@ -91,6 +121,11 @@ export async function GET(
   const reviews = await getReviews(supabase, params.id)
   return ok(reviews)
 }
+```
+
+```typescript
+// src/app/api/products/[id]/reviews/route.ts
+export { GET, POST } from '@/features/products/reviews/handler'
 ```
 
 ## Service
@@ -202,6 +237,7 @@ export const productRepository = {
 ```
 src/features/auth/
 ├── index.ts          # 公開API
+├── handler.ts        # Handler層（server-only）
 ├── schema.ts         # Zodスキーマ + 型定義
 ├── service.ts        # server-only
 ├── repository.ts     # server-only
@@ -219,11 +255,13 @@ src/features/products/
 ├── index.ts          # 公開API（サブ機能を再エクスポート）
 ├── core/             # コア機能
 │   ├── index.ts
+│   ├── handler.ts    # Handler層
 │   ├── schema.ts
 │   ├── service.ts
 │   └── repository.ts
 ├── reviews/          # サブ機能
 │   ├── index.ts
+│   ├── handler.ts    # Handler層
 │   ├── schema.ts
 │   ├── service.ts
 │   └── repository.ts

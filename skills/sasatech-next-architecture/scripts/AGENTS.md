@@ -5,20 +5,23 @@
 ## 5つの重要ルール
 
 1. **`getAll` 禁止** - 必ず `MAX_LIMIT` でサーバー側上限を強制
-2. **`server-only` 必須** - Service/Repository に必ず記述
+2. **`server-only` 必須** - Handler/Service/Repository に必ず記述
 3. **`schema.ts` 一元化** - `types.ts` は作らない、`z.infer` で型導出
-4. **3層構成** - Handler → Service → Repository を必ず経由
+4. **4層構成** - route.ts → Handler → Service → Repository を必ず経由
 5. **API Route 経由** - クライアントから Supabase 直接使用禁止
 
 ## ディレクトリ構成
 
 ```
 src/
-├── app/api/          # Handler層（リクエスト/レスポンス処理）
+├── app/api/          # route.ts（handler を re-export するだけ）
+│   └── products/
+│       └── route.ts      # → export { GET, POST } from '@/features/products/core/handler'
 ├── features/         # 機能単位のモジュール
 │   └── [feature]/
 │       ├── index.ts       # 公開API
 │       ├── core/
+│       │   ├── handler.ts     # Handler層（server-only）
 │       │   ├── schema.ts      # Zodスキーマ + 型定義
 │       │   ├── service.ts     # server-only
 │       │   └── repository.ts  # server-only
@@ -28,6 +31,8 @@ src/
 ├── lib/              # ユーティリティ
 └── types/            # Supabase生成型のみ
 ```
+
+**重要:** `route.ts` は Handler ではありません。handler を re-export するだけのエントリーポイントです。
 
 ## ルール
 
@@ -52,9 +57,10 @@ const limit = Math.min(options.limit ?? 20, MAX_LIMIT)
 
 | ファイル | server-only |
 |---------|-------------|
+| `handler.ts` | 必須 |
 | `service.ts` | 必須 |
 | `repository.ts` | 必須 |
-| `route.ts` (API) | 必須 |
+| `route.ts` (API) | 付けない（re-export のみ） |
 | `schema.ts` | 付けない |
 | `fetcher.ts` | 付けない |
 | `hooks.ts` | 付けない |
@@ -138,11 +144,20 @@ export const productRepository = {
 ### route.ts (API Route)
 
 ```typescript
+// src/app/api/products/route.ts
+// handler を re-export するだけ
+export { GET, POST } from '@/features/products/core/handler'
+```
+
+### handler.ts (Handler層)
+
+```typescript
+// src/features/products/core/handler.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
-import { getProducts, createProduct } from '@/features/products'
-import { createProductSchema } from '@/features/products/core/schema'
+import { getProducts, createProduct } from './service'
+import { createProductSchema } from './schema'
 import { createClient } from '@/lib/supabase/server'
 import { ok, created, serverError } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
@@ -186,7 +201,8 @@ export async function POST(request: NextRequest) {
 
 | ファイル | 配置先 |
 |---------|-------|
-| API Route | `src/app/api/[feature]/route.ts` |
+| route.ts | `src/app/api/[feature]/route.ts` |
+| Handler | `src/features/[feature]/core/handler.ts` |
 | Schema | `src/features/[feature]/core/schema.ts` |
 | Service | `src/features/[feature]/core/service.ts` |
 | Repository | `src/features/[feature]/core/repository.ts` |

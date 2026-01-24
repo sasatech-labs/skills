@@ -12,6 +12,7 @@ POST/PATCH リクエストのボディは必ず Zod スキーマでバリデー�
 **NG (バリデーションなし、不正な入力がそのまま処理される):**
 
 ```typescript
+// src/features/products/core/handler.ts
 export async function POST(request: NextRequest) {
   // バリデーションなしで直接使用
   const body = await request.json()
@@ -26,8 +27,11 @@ export async function POST(request: NextRequest) {
 **OK (validateBody で型安全にバリデーション):**
 
 ```typescript
+// src/features/products/core/handler.ts
+import 'server-only'
+
 import { validateBody } from '@/lib/validation'
-import { createProductSchema } from '@/features/products/core/schema'
+import { createProductSchema } from './schema'
 import { created, serverError } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
@@ -45,6 +49,11 @@ export async function POST(request: NextRequest) {
     return serverError()
   }
 }
+```
+
+```typescript
+// src/app/api/products/route.ts
+export { GET, POST } from '@/features/products/core/handler'
 ```
 
 ## validateBody の実装

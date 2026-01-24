@@ -152,12 +152,15 @@ src/
 ├── app/                      # Next.js App Router
 │   ├── (auth)/               # 認証が必要なルートグループ
 │   ├── (public)/             # 公開ルートグループ
-│   └── api/                  # API Routes (Handler層)
+│   └── api/                  # API Routes（handler を re-export）
+│       └── products/
+│           └── route.ts      # → export { GET, POST } from '@/features/products/core/handler'
 │
 ├── features/                 # 機能単位のモジュール
 │   └── [feature]/
 │       ├── index.ts          # 公開API
 │       ├── core/
+│       │   ├── handler.ts    # Handler層（server-only）
 │       │   ├── schema.ts     # Zodスキーマ + 型定義
 │       │   ├── service.ts    # server-only
 │       │   └── repository.ts # server-only
@@ -174,13 +177,17 @@ src/
 ## レイヤー構成
 
 ```
-Handler (API Route)    リクエスト/レスポンス、バリデーション、認証
+route.ts              Next.js ルーティング（handler を re-export するだけ）
+        ↓
+Handler               リクエスト/レスポンス、バリデーション、認証
         ↓
 Service               ビジネスロジック、複数 Repository 連携
         ↓
 Repository            Supabase クエリ
 Adapter               外部 API 連携（Stripe, Resend 等）
 ```
+
+**重要:** `route.ts` は Next.js のルーティングファイルであり、Handler ではない。Handler は `features/*/handler.ts` に配置する。
 
 ## 5つの重要ルール
 

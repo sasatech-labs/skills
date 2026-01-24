@@ -32,20 +32,32 @@ src/
 ```
 src/features/
 ├── products/
-│   ├── index.ts# 公開API
+│   ├── index.ts          # 公開API
 │   ├── core/
 │   │   ├── index.ts
+│   │   ├── handler.ts    # Handler層（server-only）
 │   │   ├── schema.ts
-│   │   ├── service.ts
-│   │   └── repository.ts
+│   │   ├── service.ts    # server-only
+│   │   └── repository.ts # server-only
 │   ├── fetcher.ts
 │   └── hooks.ts
 │
 └── users/
     ├── index.ts
+    ├── handler.ts        # Handler層（server-only）
     ├── schema.ts
-    ├── service.ts
-    └── repository.ts
+    ├── service.ts        # server-only
+    └── repository.ts     # server-only
+```
+
+**route.ts は handler を re-export するだけ:**
+
+```
+src/app/api/products/route.ts
+  → export { GET, POST } from '@/features/products/core/handler'
+
+src/app/api/users/route.ts
+  → export { GET, POST } from '@/features/users/handler'
 ```
 
 ## 公開 API の制御
@@ -78,11 +90,13 @@ src/features/products/
 ├── index.ts          # 親機能の公開API
 ├── core/             # 製品のコア機能
 │   ├── index.ts
+│   ├── handler.ts    # Handler層
 │   ├── schema.ts
 │   ├── service.ts
 │   └── repository.ts
 ├── reviews/          # レビュー機能
 │   ├── index.ts
+│   ├── handler.ts    # Handler層
 │   ├── schema.ts
 │   ├── service.ts
 │   └── repository.ts
@@ -114,6 +128,7 @@ const productReviews = await reviews.getReviews(supabase, productId)
 ```
 src/features/auth/
 ├── index.ts
+├── handler.ts        # Handler層
 ├── schema.ts
 ├── service.ts
 ├── repository.ts

@@ -15,11 +15,14 @@ src/
 ├── app/                      # Next.js App Router
 │   ├── (auth)/               # Auth required routes
 │   ├── (public)/             # Public routes
-│   └── api/                  # API Routes (Handler layer)
+│   └── api/                  # API Routes (handler を re-export)
+│       └── products/
+│           └── route.ts      # → export { GET, POST } from '@/features/products/core/handler'
 ├── features/                 # Feature modules
 │   └── [feature]/
 │       ├── index.ts          # Public API
 │       ├── core/
+│       │   ├── handler.ts    # Handler layer (server-only)
 │       │   ├── schema.ts     # Zod schemas + types
 │       │   ├── service.ts    # server-only
 │       │   └── repository.ts # server-only
@@ -34,15 +37,17 @@ src/
 ### Layer Architecture
 
 ```
-Handler (API Route) → Service → Repository → Supabase
+route.ts (Next.js routing) → Handler → Service → Repository → Supabase
 ```
+
+**Important:** `route.ts` is NOT a handler. It only re-exports from `features/*/handler.ts`.
 
 ### 5 Critical Rules
 
 1. **No `getAll`** - Always enforce `MAX_LIMIT` on server
-2. **`server-only` required** - Add to Service/Repository files
+2. **`server-only` required** - Add to Handler/Service/Repository files
 3. **`schema.ts` only** - No `types.ts`, use `z.infer` for types
-4. **3-layer architecture** - Always go through Handler → Service → Repository
+4. **4-layer architecture** - Always go through route.ts → Handler → Service → Repository
 5. **API Route only** - No direct Supabase access from client
 
 ---
@@ -112,9 +117,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 ```
 
 Files that need `server-only`:
+- `handler.ts` - Required
 - `service.ts` - Required
 - `repository.ts` - Required
-- `route.ts` (API) - Required
+- `route.ts` (API) - Not needed (only re-exports)
 - `schema.ts` - Not needed (used by frontend)
 - `fetcher.ts` - Not needed (client only)
 - `hooks.ts` - Not needed (client only)
@@ -204,19 +210,23 @@ export const updateProductSchema = createProductSchema.partial()
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
 ```
 
-#### 9. Three-Layer Architecture
+#### 9. Layer Architecture (route.ts → Handler → Service → Repository)
 
-Always go through all three layers. Never skip.
+Always go through all layers. Never skip. `route.ts` only re-exports from handler.
 
 ```typescript
-// NG - Handler directly accesses DB
+// NG - route.ts directly accesses DB
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data } = await supabase.from('products').select('*')
   return NextResponse.json(data)
 }
 
-// OK - Through all layers
+// OK - route.ts re-exports from handler
+// src/app/api/products/route.ts
+export { GET, POST } from '@/features/products/core/handler'
+
+// src/features/products/core/handler.ts
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const products = await getProducts(supabase)  // Service

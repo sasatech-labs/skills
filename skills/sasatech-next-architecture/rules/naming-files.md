@@ -42,6 +42,7 @@ src/components/
 | コンポーネント | kebab-case | `user-profile.tsx` |
 | Hook | kebab-case | `use-auth.ts` |
 | ユーティリティ | kebab-case | `format-date.ts` |
+| Handler | kebab-case | `handler.ts` |
 | Schema | kebab-case | `schema.ts` |
 | Service | kebab-case | `service.ts` |
 | Repository | kebab-case | `repository.ts` |
@@ -63,6 +64,7 @@ src/features/products/
 ├── index.ts
 ├── core/
 │   ├── index.ts
+│   ├── handler.ts           # 単数形
 │   ├── schema.ts            # 単数形
 │   ├── service.ts           # 単数形
 │   └── repository.ts        # 単数形

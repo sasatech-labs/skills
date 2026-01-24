@@ -57,19 +57,26 @@ LOG_LEVEL=info
 
 ## 使用例
 
-### Handler 層
+### route.ts（エントリーポイント）
 
 ```typescript
 // src/app/api/products/route.ts
+export { GET, POST } from '@/features/products/core/handler'
+```
+
+### Handler 層
+
+```typescript
+// src/features/products/core/handler.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
 import { logger, createRequestLogger } from '@/lib/logger'
-import { getProducts, createProduct } from '@/features/products'
+import { getProducts, createProduct } from './service'
 import { createClient, getUser } from '@/lib/supabase/server'
 import { ok, created, serverError } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
-import { createProductSchema } from '@/features/products/core/schema'
+import { createProductSchema } from './schema'
 
 export async function GET(request: NextRequest) {
   const requestId = crypto.randomUUID()

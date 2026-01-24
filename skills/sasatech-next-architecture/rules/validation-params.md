@@ -12,7 +12,7 @@ tags: validation, zod, handler, api
 **NG (バリデーションなし、不正な ID でクエリ実行):**
 
 ```typescript
-// src/app/api/products/[id]/route.ts
+// src/features/products/core/handler.ts
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -28,8 +28,11 @@ export async function GET(
 **OK (validateParams で UUID 形式を検証):**
 
 ```typescript
+// src/features/products/core/handler.ts
+import 'server-only'
+
 import { validateParams } from '@/lib/validation'
-import { productIdSchema } from '@/features/products/core/schema'
+import { productIdSchema } from './schema'
 import { ok, notFound } from '@/lib/api-response'
 
 export async function GET(
@@ -51,6 +54,11 @@ export async function GET(
 
   return ok(product)
 }
+```
+
+```typescript
+// src/app/api/products/[id]/route.ts
+export { GET, PATCH, DELETE } from '@/features/products/core/handler'
 ```
 
 ## ID スキーマの定義
