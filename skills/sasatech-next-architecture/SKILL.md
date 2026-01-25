@@ -192,7 +192,7 @@ Adapter               外部 API 連携（Stripe, Resend 等）
 ## 5つの重要ルール
 
 1. **全件取得禁止** - `MAX_LIMIT` でサーバー側上限を強制、`getAll` は使わない
-2. **`server-only` 必須** - Service/Repository ファイルの先頭に必ず記述
+2. **`server-only` 必須** - Handler/Service/Repository ファイルの先頭に必ず記述
 3. **`schema.ts` 一元化** - `types.ts` は作らない、`z.infer` で型を導出
 4. **3層構成を遵守** - Handler → Service → Repository を必ず経由
 5. **API Route 経由** - クライアントから Supabase への直接アクセス禁止
