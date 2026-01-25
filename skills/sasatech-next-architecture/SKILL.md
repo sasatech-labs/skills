@@ -17,12 +17,12 @@ Feature-based Clean Architecture for Next.js App Router + Supabase.
 | 4 | アーキテクチャ | HIGH | `arch-` |
 | 5 | 外部連携 | HIGH | `adapter-` |
 | 6 | ログ戦略 | HIGH | `logging-` |
-| 7 | バリデーション | MEDIUM | `validation-` |
-| 8 | レスポンス・エラー | MEDIUM | `response-`, `error-` |
-| 9 | 命名規則 | MEDIUM | `naming-` |
-| 10 | フロントエンド | LOW | `frontend-` |
-| 11 | テスト | HIGH-MEDIUM | `test-` |
-| 12 | データベース | HIGH | `db-` |
+| 7 | データベース | HIGH | `db-` |
+| 8 | テスト | HIGH-MEDIUM | `test-` |
+| 9 | バリデーション | MEDIUM | `validation-` |
+| 10 | レスポンス・エラー | MEDIUM | `response-`, `error-` |
+| 11 | 命名規則 | MEDIUM | `naming-` |
+| 12 | フロントエンド | LOW | `frontend-` |
 
 ---
 
@@ -58,36 +58,36 @@ Feature-based Clean Architecture for Next.js App Router + Supabase.
 
 - `logging-strategy` - pino で構造化ログ、console.log 禁止、レイヤーごとに適切なログ出力
 
-### 7. バリデーション (MEDIUM)
-
-- `validation-body` - POST/PATCH のリクエストボディは Zod でバリデーション
-- `validation-params` - URL パラメータ（ID 等）も Zod でバリデーション
-
-### 8. レスポンス・エラー (MEDIUM)
-
-- `response-helpers` - `ok()`, `created()`, `notFound()` 等のヘルパーを使用
-- `error-apperror` - エラーは `AppError` クラスでスロー、生の Error 禁止
-
-### 9. 命名規則 (MEDIUM)
-
-- `naming-files` - ファイル名は kebab-case（`user-profile.tsx`）
-- `naming-methods` - Repository: `findMany`/`findById`、Service: `get*`/`create*`
-
-### 12. データベース (HIGH)
+### 7. データベース (HIGH)
 
 - `db-comment-required` - テーブル・カラムに日本語コメント必須
 
-### 10. フロントエンド (LOW)
-
-- `frontend-fetcher` - Feature ごとに `fetcher.ts` を作成して API 呼び出しを集約
-- `frontend-hooks` - SWR を使用した Hook パターンでデータ取得
-
-### 11. テスト (HIGH-MEDIUM)
+### 8. テスト (HIGH-MEDIUM)
 
 - `test-server-only` - `server-only` はテスト環境でモック必須 (HIGH)
 - `test-layer-mocking` - 各レイヤーは直下の依存のみをモック (HIGH)
 - `test-file-location` - テストファイルは `__tests__` に配置 (MEDIUM)
 - `test-naming` - テストは日本語で意図を明確に (MEDIUM)
+
+### 9. バリデーション (MEDIUM)
+
+- `validation-body` - POST/PATCH のリクエストボディは Zod でバリデーション
+- `validation-params` - URL パラメータ（ID 等）も Zod でバリデーション
+
+### 10. レスポンス・エラー (MEDIUM)
+
+- `response-helpers` - `ok()`, `created()`, `notFound()` 等のヘルパーを使用
+- `error-apperror` - エラーは `AppError` クラスでスロー、生の Error 禁止
+
+### 11. 命名規則 (MEDIUM)
+
+- `naming-files` - ファイル名は kebab-case（`user-profile.tsx`）
+- `naming-methods` - Repository: `findMany`/`findById`、Service: `get*`/`create*`
+
+### 12. フロントエンド (LOW)
+
+- `frontend-fetcher` - Feature ごとに `fetcher.ts` を作成して API 呼び出しを集約
+- `frontend-hooks` - SWR を使用した Hook パターンでデータ取得
 
 ---
 
