@@ -1,7 +1,7 @@
 # AGENT.md
 
 ## 目的
-このドキュメントは、SasaTechのWEBサービス開発で使用するアーキテクチャをまとめたものである。Claudeの[Agent Skills](https://code.claude.com/docs/ja/skills)を活用し、ガイドとルールの2種類のドキュメント形式で構成する。
+このドキュメントは、SasaTechのWEBサービス開発で使用するアーキテクチャをまとめたものである。Claudeの[Agent Skills](https://code.claude.com/docs/ja/skills)を活用し、SKILL.mdを最上位とした、ガイドとルールの2種類のドキュメント形式で構成する。
 
 作業を始める前に、`skills/sasatech-next-architecture/SKILL.md`を確認すること。
 
@@ -64,19 +64,18 @@ skills/
 └── [skill-name]/
     ├── SKILL.md           # エントリポイント
     ├── guides/            # ガイド（HOW/WHY）
-    │   ├── architecture.md
-    │   ├── adapters.md
-    │   ├── testing.md
-    │   ├── database.md
-    │   ├── logging.md
-    │   └── setup.md
+    │   ├── [guide-name].md
+    │   ├── [guide-name]/  # 必要に応じて階層化
+    │   │   ├── [detail-1].md
+    │   │   ├── [detail-2].md
+    │   │   └── [detail-3].md
+    │   └── ...
     └── rules/             # ルール（DO/DON'T）
-        ├── arch-three-layers.md
-        ├── arch-feature-structure.md
-        ├── data-no-getall.md
-        ├── server-supabase-via-api.md
+        ├── [category-name].md
         └── ...
 ```
+
+ガイドは、必要に応じてサブディレクトリに階層化できる。概要レベルのガイドと詳細レベルのガイドを分離することで、読者が段階的に理解を深められる構成にする。
 
 ### ドキュメントの種類
 
@@ -136,7 +135,7 @@ description: スキルの概要を1〜2文で記述
 ```markdown
 | ガイド | 説明 |
 |--------|------|
-| [architecture.md](guides/architecture.md) | Feature-based Layer Architectureの全体設計 |
+| [ガイド名](guides/[guide-name].md) | ガイドの概要を簡潔に記述 |
 ```
 
 #### 5. ルール一覧
@@ -145,65 +144,43 @@ description: スキルの概要を1〜2文で記述
 ```markdown
 | ルール | Impact | 説明 |
 |--------|--------|------|
-| [arch-three-layers](rules/arch-three-layers.md) | CRITICAL | Handler → Service → Repository/Adapterの構成を経由 |
+| [rule-id](rules/[rule-id].md) | CRITICAL/HIGH/MEDIUM/LOW | ルールの概要を簡潔に記述 |
 ```
 
 
 ## ガイドドキュメントの構成
 
-### 必須セクション
+ガイドドキュメントは、以下の2種類に分類される：
+
+### 概要レベルのガイド
+
+全体的なアーキテクチャや設計思想を説明するガイド。詳細な実装例は含まず、詳細ガイドへのリンクを提供する。
+
+**必須セクション**:
+1. **概要（Overview）**: ガイドの目的と対象範囲
+2. **設計思想（Why）**: このパターンを採用する理由
+3. **構成**: ディレクトリ構成、レイヤー構成など
+4. **詳細ドキュメントへのリンク**: 各詳細ガイドへの参照
+
+### 詳細レベルのガイド
+
+特定の機能やレイヤーの実装方法を詳しく説明するガイド。
+
+**必須セクション**:
 
 #### 1. 概要（Overview）
 ガイドの目的と対象範囲を明確にする。
 
-**例**:
-```markdown
-## 概要
-
-このガイドでは、Adapterレイヤーの設計と実装方法を説明する。
-StripeやResendなどの外部サービスとの連携をカプセル化する方法を学ぶ。
-```
-
 #### 2. 設計思想（Why）
 このパターンを採用する理由を説明する。
-
-**例**:
-```markdown
-## 設計思想
-
-外部サービスのAPIを直接呼び出すと、以下の問題が発生する：
-- サービス変更時の影響範囲が広い
-- テストが困難
-- 実装が分散する
-
-Adapterパターンを使用することで、これらの問題を解決できる。
-```
 
 #### 3. 実装パターン（How）
 具体的な実装方法をコード例とともに示す。
 
-**例**:
-```markdown
-## 実装パターン
-
-### 基本構造
-
-\`\`\`typescript
-// lib/adapters/stripe-adapter.ts
-export class StripeAdapter {
-  async createCheckoutSession(params: CheckoutParams) {
-    // 実装
-  }
-}
-\`\`\`
-```
-
 #### 4. 使用例（Examples）
 実際のユースケースを3つ以上提供する。
 
-### 推奨セクション
-
-以下のセクションを含めることを推奨：
+**推奨セクション**（詳細レベルのガイドのみ）:
 - **前提条件**: 必要な知識、ツール、環境
 - **セットアップ**: 初期設定の手順
 - **ベストプラクティス**: 推奨パターン
@@ -232,61 +209,14 @@ tags: [タグ1, タグ2]
 #### 2. ルール（Rule）
 制約を1〜2文で明確に記述する。
 
-**例**:
-```markdown
-## ルール
-
-クライアントからSupabaseに直接アクセスしない。すべてのデータ操作はAPI Route経由で行う。
-```
-
 #### 3. NG例（Bad Example）
 違反するコード例を示す。コメントで問題点を明記する。
-
-**例**:
-```typescript
-// NG: クライアントから直接Supabaseを使用
-'use client'
-
-import { createClient } from '@/lib/supabase/client'
-
-export function UserList() {
-  const supabase = createClient()
-  // 問題: RLSをバイパスできる、サーバー側のビジネスロジックを経由しない
-  const { data } = await supabase.from('users').select('*')
-}
-```
 
 #### 4. OK例（Good Example）
 推奨されるコード例を示す。コメントで推奨理由を明記する。
 
-**例**:
-```typescript
-// OK: API Route経由でデータ取得
-'use client'
-
-import { fetchUsers } from '@/features/users/fetcher'
-
-export function UserList() {
-  // 推奨: API Routeでバリデーション、認証、ビジネスロジックを経由
-  const { data } = await fetchUsers()
-}
-```
-
 #### 5. 理由（Why）
 このルールが存在する理由と、違反時の影響を説明する。
-
-**例**:
-```markdown
-## 理由
-
-クライアントから直接Supabaseにアクセスすると、以下のリスクがある：
-- RLS（Row Level Security）の設定ミスでデータ漏洩
-- サーバー側のバリデーションをバイパス
-- ビジネスロジックの分散
-- 監査ログの欠落
-
-API Route経由にすることで、すべてのデータアクセスを制御できる。
-```
 
 ### 推奨セクション
 
@@ -402,7 +332,15 @@ NG: 「基本的に」「一般的に」「ある程度」などの修飾語を�
 
 ## レビューチェックリスト
 
-### ガイドドキュメント
+### 概要レベルのガイドドキュメント
+
+- [ ] 概要、設計思想、構成を含む
+- [ ] Why（理由）が明確に説明されている
+- [ ] 詳細ドキュメントへのリンクがある
+- [ ] 用語が統一されている
+- [ ] 誤字脱字がない
+
+### 詳細レベルのガイドドキュメント
 
 - [ ] 概要、設計思想、実装パターン、使用例を含む
 - [ ] Why（理由）が明確に説明されている
