@@ -164,7 +164,7 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 
 | ルール | Impact | 説明 |
 |--------|--------|------|
-| [naming-files](rules/naming-files.md) | LOW | ファイル名は kebab-case（`user-profile.tsx`） |
+| [naming-files](rules/naming-files.md) | LOW | ファイル・ディレクトリ名は kebab-case（フレームワーク規約ファイルを除く） |
 | [naming-methods](rules/naming-methods.md) | LOW | Repository: `findMany`/`findById`、Service: `get*`/`create*` |
 
 ### フロントエンド (`frontend-`)
