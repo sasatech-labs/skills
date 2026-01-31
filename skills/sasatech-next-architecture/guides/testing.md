@@ -1,6 +1,6 @@
 # テストガイド
 
-Feature-based Clean Architecture におけるテスト戦略。
+Feature-based Layer Architecture におけるテスト戦略。
 
 ## テストの種類と範囲
 

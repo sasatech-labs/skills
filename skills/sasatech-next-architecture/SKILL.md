@@ -1,11 +1,11 @@
 ---
 name: sasatech-next-architecture
-description: Next.js App Router architecture with Feature-based Clean Architecture pattern. Use when creating API routes, services, repositories, or components with Supabase and TypeScript. Covers Handler/Service/Repository layers, Zod validation, and feature module structure.
+description: Next.js App Router architecture with Feature-based Layer Architecture pattern. Use when creating API routes, services, repositories, or components with Supabase and TypeScript. Covers Handler/Service/Repository layers, Zod validation, and feature module structure.
 ---
 
 # SasaTech Architecture
 
-Feature-based Clean Architecture for Next.js App Router + Supabase.
+Feature-based Layer Architecture for Next.js App Router + Supabase.
 
 ## ルールカテゴリ
 

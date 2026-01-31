@@ -1,6 +1,6 @@
 # AGENTS.md
 
-このプロジェクトは Feature-based Clean Architecture を採用しています。
+このプロジェクトは Feature-based Layer Architecture を採用しています。
 
 ## 5つの重要ルール
 

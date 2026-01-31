@@ -1,6 +1,6 @@
 # アーキテクチャガイド
 
-Feature-based Clean Architecture の全体設計。
+Feature-based Layer Architecture の全体設計。
 
 ## レイヤー構成
 
