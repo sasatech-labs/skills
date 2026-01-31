@@ -1,7 +1,7 @@
 ---
 title: API レスポンスヘルパーの使用
-impact: MEDIUM
-impactDescription: 一貫したレスポンス形式、コードの簡潔化
+impact: LOW
+impactDescription: レスポンスヘルパーの不使用はパターンの統一に関する推奨事項
 tags: response, api, handler
 ---
 

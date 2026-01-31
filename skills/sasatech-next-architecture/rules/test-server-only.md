@@ -1,7 +1,7 @@
 ---
 title: server-only はテスト環境でモック必須
-impact: HIGH
-impactDescription: テスト実行の前提条件
+impact: MEDIUM
+impactDescription: モック未設定はテスト実行時エラーを招き、コードの品質・一貫性を低下させる
 tags: testing, server-only, setup
 ---
 

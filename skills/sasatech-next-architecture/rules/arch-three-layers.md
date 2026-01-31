@@ -1,11 +1,11 @@
 ---
-title: Handler → Service → Repository の3層構成
-impact: HIGH
-impactDescription: 責務分離による保守性とテスタビリティの向上
-tags: architecture, layers, handler, service, repository
+title: Handler → Service → Repository, Adapter の構成
+impact: CRITICAL
+impactDescription: レイヤー構成はアーキテクチャの根幹。違反すると責務分離が崩壊し設計パターン自体が成立しない
+tags: architecture, layers, handler, service, repository, adapter
 ---
 
-## Handler → Service → Repository の3層構成
+## Handler → Service → Repository, Adapter の構成
 
 API Route から Supabase まで、必ず3層を経由する。
 

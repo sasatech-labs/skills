@@ -1,7 +1,7 @@
 ---
 title: ファイル・ディレクトリ命名規則
-impact: MEDIUM
-impactDescription: 一貫したプロジェクト構造、ファイルの発見性向上
+impact: LOW
+impactDescription: ファイル命名規則の統一は開発体験・パターンの統一に関する推奨事項
 tags: naming, files, directory, convention
 ---
 

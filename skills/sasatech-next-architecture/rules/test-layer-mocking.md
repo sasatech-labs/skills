@@ -1,7 +1,7 @@
 ---
 title: 各レイヤーは直下の依存のみをモック
 impact: HIGH
-impactDescription: テストの独立性と保守性を確保
+impactDescription: レイヤーを跨いだモックはテストの独立性が崩壊し、3層構成の保守性を大きく損なう
 tags: testing, mocking, layers
 ---
 

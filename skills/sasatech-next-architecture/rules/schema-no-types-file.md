@@ -1,7 +1,7 @@
 ---
 title: types.ts ファイル作成禁止
-impact: HIGH
-impactDescription: 型の重複を防止、Single Source of Truth を維持
+impact: MEDIUM
+impactDescription: types.tsの存在は型定義の重複を招き、コードの品質・一貫性を低下させる
 tags: schema, types, feature-structure
 ---
 

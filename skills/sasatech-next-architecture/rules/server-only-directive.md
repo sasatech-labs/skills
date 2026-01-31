@@ -1,7 +1,7 @@
 ---
 title: server-only ディレクティブ必須
-impact: CRITICAL
-impactDescription: サーバー専用コードのクライアントバンドル混入を防止
+impact: HIGH
+impactDescription: server-only欠如はサーバー専用コードのクライアント混入を招き、整合性を大きく損なう
 tags: server, security, next-js, bundling
 ---
 

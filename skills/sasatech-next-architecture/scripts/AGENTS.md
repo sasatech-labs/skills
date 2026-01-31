@@ -2,14 +2,6 @@
 
 このプロジェクトは Feature-based Layer Architecture を採用しています。
 
-## 5つの重要ルール
-
-1. **`getAll` 禁止** - 必ず `MAX_LIMIT` でサーバー側上限を強制
-2. **`server-only` 必須** - Service/Repository に必ず記述
-3. **`schema.ts` 一元化** - `types.ts` は作らない、`z.infer` で型導出
-4. **3層構成** - Handler → Service → Repository を必ず経由
-5. **API Route 経由** - クライアントから Supabase 直接使用禁止
-
 ## ディレクトリ構成
 
 ```

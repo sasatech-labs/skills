@@ -1,7 +1,7 @@
 ---
 title: テストファイルは __tests__ ディレクトリに配置
-impact: MEDIUM
-impactDescription: テストファイルの一貫した配置による整理
+impact: LOW
+impactDescription: テストファイル配置の統一は開発体験に関する推奨事項
 tags: testing, structure, organization
 ---
 

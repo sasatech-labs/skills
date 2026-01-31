@@ -1,7 +1,7 @@
 ---
 title: クライアントから Supabase 直接使用禁止
 impact: CRITICAL
-impactDescription: セキュリティとアーキテクチャの一貫性を確保
+impactDescription: API Route経由のアクセスはアーキテクチャの根幹。バイパスすると3層構成が成立しない
 tags: server, security, supabase, architecture
 ---
 
@@ -109,7 +109,7 @@ Supabase
 ## 理由
 
 1. **セキュリティ**: 環境変数をクライアントに露出しない
-2. **一貫性**: Handler → Service → Repository の3層を維持
+2. **一貫性**: Handler → Service → Repository, Adapter の構成を維持
 3. **バリデーション**: サーバーサイドで入力検証を行える
 4. **ログ**: サーバーサイドでリクエストを記録できる
 5. **キャッシュ**: サーバーサイドでキャッシュ戦略を制御できる

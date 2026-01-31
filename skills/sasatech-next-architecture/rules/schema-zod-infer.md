@@ -1,7 +1,7 @@
 ---
 title: z.infer で Input 型を導出
-impact: HIGH
-impactDescription: スキーマと型の同期を自動化
+impact: MEDIUM
+impactDescription: 手動型定義はスキーマとの乖離を招き、コードの品質・一貫性を低下させる
 tags: schema, types, zod, validation
 ---
 

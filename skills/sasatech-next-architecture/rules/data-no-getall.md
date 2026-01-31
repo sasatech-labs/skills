@@ -1,7 +1,7 @@
 ---
 title: 全件取得（getAll/findAll）の禁止
-impact: CRITICAL
-impactDescription: メモリ枯渇、レスポンス遅延、DoS脆弱性を防止
+impact: HIGH
+impactDescription: 全件取得はメモリ枯渇・DoS脆弱性を招き、保守性を大きく損なう
 tags: data-access, pagination, security, repository
 ---
 

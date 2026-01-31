@@ -1,7 +1,7 @@
 ---
 title: URL パラメータのバリデーション
 impact: MEDIUM
-impactDescription: 不正なパラメータによるエラーを早期検出
+impactDescription: パラメータ未検証は不正値でのクエリ実行を招き、コードの品質・一貫性を低下させる
 tags: validation, zod, handler, api
 ---
 

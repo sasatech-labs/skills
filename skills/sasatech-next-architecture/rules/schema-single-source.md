@@ -1,7 +1,7 @@
 ---
 title: schema.ts に型定義を一元化
 impact: HIGH
-impactDescription: 型の重複と不整合を防止、保守性向上
+impactDescription: 型定義の分散は不整合を招き、アーキテクチャの整合性・保守性を大きく損なう
 tags: schema, types, zod, feature-structure
 ---
 

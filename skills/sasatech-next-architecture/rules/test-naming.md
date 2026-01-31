@@ -1,7 +1,7 @@
 ---
 title: テストは日本語で意図を明確に記述
-impact: MEDIUM
-impactDescription: テストの可読性と意図の明確化
+impact: LOW
+impactDescription: テスト命名の統一は開発体験・可読性に関する推奨事項
 tags: testing, naming, readability
 ---
 

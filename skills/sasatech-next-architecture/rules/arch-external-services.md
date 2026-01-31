@@ -1,7 +1,7 @@
 ---
 title: 外部サービス連携は Adapter 経由
 impact: HIGH
-impactDescription: 外部API依存の隔離、テスタビリティ、ベンダーロックイン防止
+impactDescription: 外部API依存の隔離が崩れると整合性・保守性を大きく損なう
 tags: architecture, adapter, external-api, stripe, resend
 ---
 
@@ -114,5 +114,5 @@ vi.mock('@/lib/adapters/stripe', () => ({
 
 ## 関連ルール
 
-- [arch-three-layers](./arch-three-layers.md) - Handler → Service → Repository の3層構成
+- [arch-three-layers](./arch-three-layers.md) - Handler → Service → Repository, Adapter の構成
 - [server-only-directive](./server-only-directive.md) - Adapter にも `server-only` 必須

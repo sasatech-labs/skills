@@ -1,7 +1,7 @@
 ---
 title: Repository/Service メソッド命名規則
-impact: MEDIUM
-impactDescription: 一貫したAPI、コードの予測可能性向上
+impact: LOW
+impactDescription: メソッド命名規則の統一は開発体験・パターンの統一に関する推奨事項
 tags: naming, methods, repository, service
 ---
 

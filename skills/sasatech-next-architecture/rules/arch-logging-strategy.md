@@ -1,7 +1,7 @@
 ---
 title: pino を使用した構造化ログ
-impact: HIGH
-impactDescription: デバッグ、監視、障害対応の基盤
+impact: MEDIUM
+impactDescription: ログの非構造化はデバッグ・監視の品質と一貫性を低下させる
 tags: logging, pino, observability, debugging
 ---
 

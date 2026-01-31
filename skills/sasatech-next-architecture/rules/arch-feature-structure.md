@@ -1,7 +1,7 @@
 ---
 title: Feature モジュール構成
-impact: HIGH
-impactDescription: 機能単位でのコード管理、依存関係の明確化
+impact: CRITICAL
+impactDescription: Feature単位のモジュール構成はアーキテクチャの根幹。違反すると設計パターン自体が成立しない
 tags: architecture, feature, module, directory-structure
 ---
 

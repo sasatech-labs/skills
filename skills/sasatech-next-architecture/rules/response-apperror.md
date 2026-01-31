@@ -1,7 +1,7 @@
 ---
 title: AppError クラスの使用
 impact: MEDIUM
-impactDescription: 一貫したエラーハンドリング、エラー情報の伝播
+impactDescription: 生Errorの使用はエラー情報の伝播が不十分になり、コードの品質・一貫性を低下させる
 tags: error, exception, service, repository
 ---
 

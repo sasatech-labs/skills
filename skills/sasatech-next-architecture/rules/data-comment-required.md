@@ -1,9 +1,11 @@
-# db-comment-required
+---
+title: テーブル・カラムに日本語コメント必須
+impact: LOW
+impactDescription: DBコメントの有無は開発体験・スキーマ理解に関する推奨事項
+tags: database, comment, documentation
+---
 
-**Priority**: HIGH
-**Category**: データベース
-
-## ルール
+## テーブル・カラムに日本語コメント必須
 
 すべてのテーブルとカラムに日本語のコメント（説明）を付ける。
 

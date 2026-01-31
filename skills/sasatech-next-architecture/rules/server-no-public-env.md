@@ -1,7 +1,7 @@
 ---
 title: 機密情報の NEXT_PUBLIC_ 環境変数禁止
-impact: CRITICAL
-impactDescription: 機密情報のクライアント露出を防止
+impact: HIGH
+impactDescription: 機密情報のクライアント露出はセキュリティとアーキテクチャの整合性を大きく損なう
 tags: server, security, environment, supabase
 ---
 

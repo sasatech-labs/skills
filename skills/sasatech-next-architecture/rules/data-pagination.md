@@ -1,7 +1,7 @@
 ---
 title: ページネーション必須
-impact: CRITICAL
-impactDescription: 大量データでもレスポンス時間を一定に保つ
+impact: HIGH
+impactDescription: ページネーション欠如は大量データでの性能劣化を招き、保守性を大きく損なう
 tags: data-access, pagination, repository, api
 ---
 

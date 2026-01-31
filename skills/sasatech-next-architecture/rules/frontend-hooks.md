@@ -1,7 +1,7 @@
 ---
 title: SWR Hooks パターン
 impact: LOW
-impactDescription: データフェッチの状態管理を簡潔化
+impactDescription: SWR Hookパターンの不使用は状態管理の複雑化を招く推奨事項
 tags: frontend, hooks, swr, client
 ---
 

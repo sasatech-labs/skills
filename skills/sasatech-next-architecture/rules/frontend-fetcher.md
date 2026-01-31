@@ -1,7 +1,7 @@
 ---
 title: Fetcher パターン
 impact: LOW
-impactDescription: API呼び出しの一元化、エラーハンドリングの統一
+impactDescription: Fetcherパターンの不使用はAPI呼び出しの分散を招く推奨事項
 tags: frontend, fetcher, api, client
 ---
 

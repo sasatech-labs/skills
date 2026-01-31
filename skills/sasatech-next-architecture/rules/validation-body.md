@@ -1,7 +1,7 @@
 ---
 title: リクエストボディのバリデーション
 impact: MEDIUM
-impactDescription: 不正な入力によるエラーを早期検出
+impactDescription: バリデーション欠如は不正入力の通過を招き、コードの品質・一貫性を低下させる
 tags: validation, zod, handler, api
 ---
 
