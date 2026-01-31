@@ -1,235 +1,89 @@
 # アーキテクチャガイド
 
-Feature-based Layer Architecture の全体設計。
+## 概要
+
+このガイドでは、`features/`ディレクトリ内のアーキテクチャを説明する。Handler、Service、Repository、Adapterの4層構成で、関心事を分離し、保守性と拡張性を確保する。
+
+## 設計思想
+
+レイヤーを明確に分離することで、以下の利点を得る：
+
+- **関心事の分離**: 各レイヤーが単一の責務を持つ
+- **テスト容易性**: 各レイヤーを独立してテストできる
+- **保守性**: 変更の影響範囲を限定できる
+- **拡張性**: 新機能の追加が容易
 
 ## レイヤー構成
 
-Handler → Service → Repository / Adapter のアーキテクチャ。
-
 ```
-┌─────────────────────────────────────────────────────────┐
-│  app/api/          Handler層 (API Route)               │
-│                    - リクエスト/レスポンス処理          │
-│                    - バリデーション                     │
-│                    - 認証チェック                       │
-└─────────────────────────┬───────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────┐
-│  features/*/       Service層                            │
-│                    - ビジネスロジック                   │
-│                    - Repository / Adapter を使用       │
-└───────────┬─────────────────────────┬───────────────────┘
-            │                         │
-┌───────────▼───────────┐  ┌──────────▼──────────────────┐
-│  features/*/          │  │  lib/adapters/              │
-│  Repository層         │  │  Adapter層                  │
-│  - Supabaseクエリ     │  │  - 外部API連携              │
-│  - データアクセス     │  │  - Stripe, Resend等         │
-└───────────────────────┘  └─────────────────────────────┘
+Handler (handler.ts)   リクエスト/レスポンス、バリデーション、認証
+        ↓
+Service               ビジネスロジック、複数 Repository 連携
+        ↓
+Repository            データアクセス
+Adapter               外部 API 連携（Stripe, Resend 等）
 ```
 
-**Repository**: 内部データストア（Supabase）へのアクセス
-**Adapter**: 外部サービス（決済、メール、AI等）への連携
+### 各レイヤーの責務
 
-## Handler (API Route)
+- **API Route**: 薄いエントリーポイント。Handler関数を呼び出すだけ
+- **Handler**: リクエスト/レスポンスの境界。入力検証と認証を担当
+- **Service**: ビジネスロジックの中核。複数のRepositoryやAdapterを組み合わせる
+- **Repository**: 内部データストア（Supabase）へのアクセスをカプセル化
+- **Adapter**: 外部サービス（決済、メール、AI等）への連携をカプセル化
 
-リクエスト/レスポンスの処理。バリデーションと認証を担当。
+### 詳細ドキュメント
 
-```typescript
-// src/app/api/products/route.ts
-import 'server-only'
+各レイヤーの実装方法は、以下のドキュメントを参照：
 
-import { NextRequest } from 'next/server'
-import { getProducts, createProduct } from '@/features/products'
-import { createProductSchema } from '@/features/products/core/schema'
-import { createClient } from '@/lib/supabase/server'
-import { ok, created, serverError } from '@/lib/api-response'
-import { validateBody } from '@/lib/validation'
-
-export async function GET(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase)
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
-
-export async function POST(request: NextRequest) {
-  const validation = await validateBody(request, createProductSchema)
-  if (!validation.success) {
-    return validation.response
-  }
-
-  try {
-    const supabase = await createClient()
-    const product = await createProduct(supabase, validation.data)
-    return created(product)
-  } catch (error) {
-    return serverError()
-  }
-}
-```
-
-### ネストしたルートの例
-
-```typescript
-// src/app/api/products/[id]/reviews/route.ts
-import 'server-only'
-
-import { NextRequest } from 'next/server'
-import { getReviews, createReview } from '@/features/products/reviews'
-import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const supabase = await createClient()
-  const reviews = await getReviews(supabase, params.id)
-  return ok(reviews)
-}
-```
-
-## Service
-
-ビジネスロジックを担当。Repositoryを通じてデータにアクセス。
-
-```typescript
-// src/features/products/core/service.ts
-import 'server-only'
-
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Product, CreateProductInput } from './schema'
-import { productRepository } from './repository'
-import { AppError } from '@/lib/errors'
-
-export async function getProducts(
-  supabase: SupabaseClient,
-  options: { limit?: number; offset?: number } = {}
-): Promise<Product[]> {
-  return productRepository.findMany(supabase, options)
-}
-
-export async function createProduct(
-  supabase: SupabaseClient,
-  input: CreateProductInput
-): Promise<Product> {
-  if (!input.name?.trim()) {
-    throw new AppError('Name is required', 400)
-  }
-
-  return productRepository.create(supabase, {
-    name: input.name.trim(),
-    price: input.price,
-    description: input.description ?? '',
-  })
-}
-```
-
-## Repository
-
-データアクセスを抽象化。Supabaseクエリをカプセル化。
-
-```typescript
-// src/features/products/core/repository.ts
-import 'server-only'
-
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Product } from './schema'
-import { AppError } from '@/lib/errors'
-
-const MAX_LIMIT = 100  // サーバー側の上限
-
-export const productRepository = {
-  async findMany(
-    supabase: SupabaseClient,
-    options: { limit?: number; offset?: number } = {}
-  ): Promise<Product[]> {
-    // クライアントのリクエストに関わらず上限を強制
-    const limit = Math.min(options.limit ?? 20, MAX_LIMIT)
-    const offset = options.offset ?? 0
-
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    if (error) throw new AppError(error.message, 500)
-    return data
-  },
-
-  async findById(
-    supabase: SupabaseClient,
-    id: string
-  ): Promise<Product | null> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw new AppError(error.message, 500)
-    }
-    return data
-  },
-
-  async create(
-    supabase: SupabaseClient,
-    product: Omit<Product, 'id' | 'created_at'>
-  ): Promise<Product> {
-    const { data, error } = await supabase
-      .from('products')
-      .insert(product)
-      .select()
-      .single()
-
-    if (error) throw new AppError(error.message, 500)
-    return data
-  },
-}
-```
+- [Handler層の実装](architecture/handler.md)
+- [Service層の実装](architecture/service.md)
+- [Repository層の実装](architecture/repository.md)
+- [Adapter層の実装](architecture/adapter.md)
 
 ## Feature ディレクトリ構成
 
 ### 単一機能
 
 ```
-src/features/auth/
+features/auth/
 ├── index.ts          # 公開API
-├── schema.ts         # Zodスキーマ + 型定義
-├── service.ts        # server-only
-├── repository.ts     # server-only
-├── fetcher.ts        # クライアント用
-├── hooks.ts          # クライアント用
-└── components/
-    ├── server/       # Server Components
-    └── client/       # Client Components
+└── core/
+    ├── schema.ts     # Zodスキーマ + 型定義
+    ├── handler.ts    # リクエスト / レスポンス処理 (server-only)
+    ├── service.ts    # ビジネスロジック (server-only)
+    ├── repository.ts # データアクセス (server-only)
+    ├── adapter.ts    # 外部API連携 (server-only)
+    ├── fetcher.ts    # API呼び出し
+    └── hooks.ts      # SWR Hook等
 ```
 
 ### グループ化された機能
 
 ```
-src/features/products/
+features/products/
 ├── index.ts          # 公開API（サブ機能を再エクスポート）
 ├── core/             # コア機能
 │   ├── index.ts
 │   ├── schema.ts
+│   ├── handler.ts
 │   ├── service.ts
-│   └── repository.ts
+│   ├── repository.ts
+│   ├── adapter.ts
+│   ├── fetcher.ts
+│   └── hooks.ts
 ├── reviews/          # サブ機能
 │   ├── index.ts
 │   ├── schema.ts
+│   ├── handler.ts
 │   ├── service.ts
-│   └── repository.ts
-├── fetcher.ts
-├── hooks.ts
+│   ├── repository.ts
+│   ├── adapter.ts
+│   ├── fetcher.ts
+│   └── hooks.ts
 └── components/
+    ├── server/       # Server Components
+    └── client/       # Client Components
 ```
 
 ## 公開インターフェース
@@ -237,49 +91,105 @@ src/features/products/
 ### 単一機能
 
 ```typescript
-// src/features/auth/index.ts
-export { signIn, signUp, signOut } from './service'
-export type { User, AuthState } from './schema'
+// features/auth/index.ts
+export { handleSignIn, handleSignUp, handleSignOut } from './core/handler'
+export { signIn, signUp, signOut } from './core/service'
+export type { User, AuthState } from './core/schema'
 ```
 
 ### グループ化された機能
 
 ```typescript
-// src/features/products/index.ts
+// features/products/index.ts
 export * from './core'
 export * as reviews from './reviews'
 export * as inventory from './inventory'
 ```
 
 ```typescript
-// src/features/products/core/index.ts
+// features/products/core/index.ts
+export { handleGetProducts, handleCreateProduct } from './handler'
 export { getProducts, createProduct } from './service'
 export type { Product, CreateProductInput } from './schema'
 ```
 
 ```typescript
-// 利用側
+// 利用側（API Route）
+import { handleGetProducts } from '@/features/products'
+
+// 利用側（Service）
 import { getProducts, Product } from '@/features/products'
 import { reviews } from '@/features/products'
 
 // または直接インポート
-import { getReviews } from '@/features/products/reviews'
+import { handleGetReviews } from '@/features/products/reviews'
 ```
 
 ## 段階的スケーリング
 
-薄い間は単一ファイル、厚くなったらディレクトリに分割。
+### 基本方針
+
+薄い間は単一ファイル、厚くなったらディレクトリに分割する。過度な抽象化を避け、必要になったタイミングで構造を拡張する。
+
+### 分割の基準
+
+#### 単一ファイルのまま（薄い構成）
+
+以下の条件をすべて満たす場合は、単一ファイルを維持する：
+
+- **ファイルサイズ**: 200行以内
+- **関数数**: 5個以下の公開関数
+- **単一の責務**: 1つの明確な概念のみを扱う
+- **保守性**: ファイル内の検索や編集が容易
+
+#### ディレクトリ分割（厚い構成）
+
+以下のいずれかに該当したら、ディレクトリ分割を検討する：
+
+- **ファイルサイズ**: 300行を超える
+- **関数数**: 5個以上の公開関数が存在する
+- **責務の増加**: 複数の異なる概念（例: User, Profile, Settings）を扱う
+- **保守性の低下**: ファイル内の検索や編集が困難になった
+- **チーム開発**: 複数人が同じファイルを頻繁に編集してコンフリクトが発生する
+
+### スケーリングパターン
 
 ```
-# 薄い構成              # 厚い構成
-features/auth/          features/users/
-├── schema.ts           ├── schemas/
-├── service.ts          │   ├── index.ts
-└── repository.ts       │   ├── user.ts
-                        │   └── profile.ts
-                        ├── services/
-                        │   ├── index.ts
-                        │   ├── user-service.ts
-                        │   └── profile-service.ts
-                        └── repositories/
+# 薄い構成                  # 厚い構成
+features/auth/            features/users/
+└── core/                 └── core/
+    ├── schema.ts             ├── schemas/
+    ├── handler.ts            │   ├── index.ts
+    ├── service.ts            │   ├── user.ts
+    ├── repository.ts         │   └── profile.ts
+    ├── adapter.ts            ├── handlers/
+    ├── fetcher.ts            │   ├── index.ts
+    └── hooks.ts              │   ├── user-handler.ts
+                              │   └── profile-handler.ts
+                              ├── services/
+                              │   ├── index.ts
+                              │   ├── user-service.ts
+                              │   └── profile-service.ts
+                              ├── repositories/
+                              │   ├── index.ts
+                              │   ├── user-repository.ts
+                              │   └── profile-repository.ts
+                              ├── adapters/
+                              │   ├── index.ts
+                              │   └── email-adapter.ts
+                              ├── fetchers/
+                              │   ├── index.ts
+                              │   ├── user-fetcher.ts
+                              │   └── profile-fetcher.ts
+                              └── hooks/
+                                  ├── index.ts
+                                  ├── use-user.ts
+                                  └── use-profile.ts
 ```
+
+### 分割時の注意点
+
+1. **公開APIは維持**: `index.ts`で再エクスポートし、利用側のインポートパスは変更しない
+2. **段階的に移行**: すべてのファイルを一度に分割せず、必要なレイヤーから順次分割する
+3. **命名規則の統一**: 分割後のファイル名は`[entity]-[layer].ts`形式で統一する
+4. **テストも同様に分割**: ファイルを分割したら、対応するテストファイルも分割する

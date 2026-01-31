@@ -68,7 +68,6 @@ src/
 | ガイド | 説明 |
 |--------|------|
 | [architecture.md](guides/architecture.md) | Feature-based Layer Architecture の全体設計。レイヤー構成、責務分離、ディレクトリ構成 |
-| [adapters.md](guides/adapters.md) | 外部サービス（決済、メール、AI 等）との連携をカプセル化する Adapter レイヤーの実装 |
 | [testing.md](guides/testing.md) | レイヤーごとのテスト戦略。Unit / Integration テストの範囲とモック方針 |
 | [database.md](guides/database.md) | データベース設計。コメント規約、マイグレーション、Supabase との連携 |
 | [logging.md](guides/logging.md) | pino を使用した構造化ログの実装。レイヤーごとのログ出力方針 |
