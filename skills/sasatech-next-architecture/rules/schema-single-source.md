@@ -1,17 +1,20 @@
 ---
+id: schema-single-source
 title: schema.ts に型定義を一元化
+category: スキーマ・型定義
 impact: HIGH
-impactDescription: 型定義の分散は不整合を招き、アーキテクチャの整合性・保守性を大きく損なう
-tags: schema, types, zod, feature-structure
+tags: [schema, types, zod, feature-structure]
 ---
 
-## schema.ts に型定義を一元化
+## ルール
 
-Feature 内の型定義は `schema.ts` に集約する。`types.ts` は作成しない。
+Feature内の型定義は`schema.ts`に集約する。`types.ts`は作成しない。
 
-**NG (型定義が分散、同期が困難):**
+## NG例
 
-```
+型定義が分散し、同期が困難になる。
+
+```plaintext
 src/features/products/
 ├── schema.ts         # Zodスキーマのみ
 ├── types.ts          # 別ファイルに型定義
@@ -26,22 +29,25 @@ export const createProductSchema = z.object({
   price: z.number(),
 })
 
-// types.ts - 重複した型定義
+// types.ts - 重複した型定義（NG: schema.tsと手動で同期が必要）
 export type Product = {
   id: string
   name: string
   price: number
 }
 
+// NG: Zodスキーマと重複した型定義
 export type CreateProductInput = {
   name: string
   price: number
 }
 ```
 
-**OK (schema.ts に一元化、Zod から型導出):**
+## OK例
 
-```
+schema.tsに一元化し、Zodから型を導出する。
+
+```plaintext
 src/features/products/
 ├── schema.ts         # Zodスキーマ + 型定義
 ├── service.ts
@@ -53,10 +59,10 @@ src/features/products/
 import { z } from 'zod'
 import type { ProductRow } from '@/types'  // Supabase生成型
 
-// Entity Type（Supabase型から派生）
+// OK: Entity型はSupabase生成型から派生
 export type Product = ProductRow
 
-// Input Schemas
+// OK: Zodスキーマを定義
 export const createProductSchema = z.object({
   name: z.string().min(1, '商品名は必須です').max(100),
   price: z.number().min(0, '価格は0以上で入力してください'),
@@ -69,24 +75,36 @@ export const productIdSchema = z.object({
   id: z.string().uuid('無効なIDです'),
 })
 
-// Input Types（スキーマから自動導出）
+// OK: Input型はz.inferで自動導出
 export type CreateProductInput = z.infer<typeof createProductSchema>
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
 ```
 
-## ルール
+## 理由
 
-1. **Entity 型**: Supabase 生成型（`@/types`）からエイリアスまたは派生
-2. **Input 型**: `z.infer<typeof schema>` で Zod スキーマから導出
-3. **types.ts は作成しない**: すべて schema.ts に集約
+型定義の分散は以下の問題を引き起こす。
 
-## server-only を付けない
+1. **不整合のリスク**: `schema.ts`と`types.ts`を手動で同期する必要があり、更新漏れが発生する
+2. **保守性の低下**: 型を変更する際に複数ファイルを修正する必要がある
+3. **Single Source of Truthの違反**: 同じデータ構造が複数箇所で定義される
 
-`schema.ts` はフロントエンド（フォームバリデーション）でも使用するため、`server-only` を付けない:
+`schema.ts`に一元化し、`z.infer`で型を自動導出することで、整合性を保証し、保守性を向上させる。
+
+## 補足
+
+### Entity型とInput型の定義ルール
+
+1. **Entity型**: Supabase生成型（`@/types`）からエイリアスまたは派生する
+2. **Input型**: `z.infer<typeof schema>`でZodスキーマから導出する
+3. **types.tsは作成しない**: すべての型定義を`schema.ts`に集約する
+
+### server-onlyを付けない
+
+`schema.ts`はフロントエンド（フォームバリデーション）でも使用するため、`server-only`を付けない。
 
 ```typescript
 // src/features/products/core/schema.ts
-// import 'server-only'  ← 付けない
+// import 'server-only'  ← 付けない（フロントエンドで使用するため）
 
 import { z } from 'zod'
 ```
@@ -97,7 +115,8 @@ import { z } from 'zod'
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createProductSchema, CreateProductInput } from '../core/schema'  // 使用可能
+// OK: schema.tsをフロントエンドで使用可能
+import { createProductSchema, CreateProductInput } from '../core/schema'
 
 export function CreateProductForm() {
   const { register, handleSubmit } = useForm<CreateProductInput>({

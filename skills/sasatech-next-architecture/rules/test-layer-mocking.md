@@ -1,15 +1,16 @@
 ---
+id: test-layer-mocking
 title: 各レイヤーは直下の依存のみをモック
+category: テスト
 impact: HIGH
-impactDescription: レイヤーを跨いだモックはテストの独立性が崩壊し、3層構成の保守性を大きく損なう
-tags: testing, mocking, layers
+tags: [testing, mocking, layers]
 ---
 
-## 各レイヤーは直下の依存のみをモック
+## ルール
 
-テスト対象レイヤーの直下の依存のみをモックする。
+テスト対象レイヤーの直下の依存のみをモックする。レイヤーを跨いだモックは禁止。
 
-**NG (Service テストで Supabase を直接モック、責務が不明確):**
+## NG例
 
 ```typescript
 // Service のテストで Supabase を直接モック
@@ -20,6 +21,7 @@ import { createClient } from '@/lib/supabase/server'
 vi.mock('@/lib/supabase/server')
 
 it('商品一覧を返す', async () => {
+  // NG: Service テストが Repository を経由せず Supabase を直接モック
   vi.mocked(createClient).mockResolvedValue({
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockResolvedValue({ data: [...], error: null }),
@@ -30,7 +32,7 @@ it('商品一覧を返す', async () => {
 })
 ```
 
-**OK (Service テストでは Repository をモック):**
+## OK例
 
 ```typescript
 // Service のテストでは Repository をモック
@@ -40,7 +42,7 @@ import { productRepository } from '../core/repository'
 vi.mock('../core/repository')
 
 it('商品一覧を返す', async () => {
-  // 直下の依存（Repository）をモック
+  // OK: 直下の依存（Repository）をモック
   vi.mocked(productRepository.findMany).mockResolvedValue([
     { id: '1', name: 'Product A' },
   ])
@@ -50,7 +52,7 @@ it('商品一覧を返す', async () => {
 })
 ```
 
-## モック対象の対応表
+### モック対象の対応表
 
 | テスト対象 | モック対象 | モックしない |
 |-----------|-----------|-------------|
@@ -60,13 +62,15 @@ it('商品一覧を返す', async () => {
 
 ## 理由
 
+レイヤーを跨いだモックは、テストの独立性が崩壊し、3層構成の保守性を大きく損なう。
+
 1. **テストの独立性** - 各レイヤーを独立して検証できる
 2. **保守性** - 下位レイヤーの実装変更がテストに影響しない
-3. **明確な責務** - 各テストが何を検証しているか明確
+3. **明確な責務** - 各テストが何を検証しているか明確になる
 
 ## 例外
 
-統合テストでは複数レイヤーを跨いでテストすることがある:
+統合テストでは複数レイヤーを跨いでテストする。
 
 ```typescript
 // E2E や統合テストでは複数レイヤーを通す

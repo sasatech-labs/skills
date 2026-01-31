@@ -1,15 +1,16 @@
 ---
+id: response-apperror
 title: AppError クラスの使用
+category: レスポンス
 impact: MEDIUM
-impactDescription: 生Errorの使用はエラー情報の伝播が不十分になり、コードの品質・一貫性を低下させる
-tags: error, exception, service, repository
+tags: [error, exception, service, repository]
 ---
 
-## AppError クラスの使用
+## ルール
 
-Service 層と Repository 層では `AppError` クラスでエラーをスローする。
+Service 層と Repository 層では `AppError` クラスでエラーをスローする。生の `Error` は使用しない。
 
-**NG (生の Error、HTTP ステータスコードが伝わらない):**
+## NG例
 
 ```typescript
 // Repository
@@ -36,7 +37,7 @@ async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
 }
 ```
 
-**OK (AppError で HTTP ステータスコードとエラーコードを伝播):**
+## OK例
 
 ```typescript
 import { AppError } from '@/lib/errors'
@@ -71,6 +72,16 @@ async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
   }
 }
 ```
+
+## 理由
+
+生の `Error` を使用すると、以下の問題が発生する：
+
+1. **HTTP ステータスコードが伝わらない**: Handler 層でエラーの種類（404, 403, 400など）を判別できず、適切なレスポンスを返せない
+2. **エラーコードの欠如**: クライアント側でエラーの種類を識別できず、適切なエラーハンドリングができない
+3. **一貫性の欠如**: エラー処理の実装が各所で異なり、保守性が低下する
+
+`AppError` を使用することで、Service/Repository 層からの HTTP ステータスコードとエラーコードが Handler 層まで伝播し、一貫したエラーレスポンスを実現できる。
 
 ## Handler でのエラーハンドリング
 

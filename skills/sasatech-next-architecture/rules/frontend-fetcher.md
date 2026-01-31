@@ -1,15 +1,16 @@
 ---
+id: frontend-fetcher
 title: Fetcher パターン
+category: フロントエンド
 impact: LOW
-impactDescription: Fetcherパターンの不使用はAPI呼び出しの分散を招く推奨事項
-tags: frontend, fetcher, api, client
+tags: [frontend, fetcher, api, client]
 ---
 
-## Fetcher パターン
+## ルール
 
-Feature ごとに `fetcher.ts` を作成し、API 呼び出しを一元化する。
+Featureごとに`fetcher.ts`を作成し、API呼び出しを一元化する。コンポーネント内で直接`fetch`を使用しない。
 
-**NG (コンポーネントで直接 fetch、エラー処理が分散):**
+## NG例
 
 ```typescript
 // src/features/products/components/product-list.tsx
@@ -29,7 +30,7 @@ export function ProductList() {
 }
 ```
 
-**OK (Fetcher で API 呼び出しを一元化):**
+## OK例
 
 ```typescript
 // src/features/products/fetcher.ts
@@ -83,7 +84,20 @@ export function ProductList() {
 }
 ```
 
-## 共通 Fetcher の実装
+## 理由
+
+API呼び出しをコンポーネント内に直接記述すると、以下の問題が発生する：
+
+- エラーハンドリングがコンポーネントごとに分散し、一貫性が失われる
+- API URLの変更時に複数のコンポーネントを修正する必要がある
+- テスト時にAPI呼び出しのモック化が困難になる
+- 型安全性が確保できず、ランタイムエラーのリスクが高まる
+
+Fetcherパターンを使用することで、API呼び出しロジックを一元管理し、保守性とテスト容易性が向上する。
+
+## 参考実装
+
+### 共通 Fetcher の実装
 
 ```typescript
 // src/lib/fetcher.ts

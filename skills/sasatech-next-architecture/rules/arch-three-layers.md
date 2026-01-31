@@ -1,22 +1,23 @@
 ---
+id: arch-three-layers
 title: Handler → Service → Repository, Adapter の構成
+category: アーキテクチャ
 impact: CRITICAL
-impactDescription: レイヤー構成はアーキテクチャの根幹。違反すると責務分離が崩壊し設計パターン自体が成立しない
-tags: architecture, layers, handler, service, repository, adapter
+tags: [architecture, layers, handler, service, repository, adapter]
 ---
 
-## Handler → Service → Repository, Adapter の構成
+## ルール
 
-API Route から Supabase まで、必ず3層を経由する。
+API RouteからSupabaseまで、Handler → Service → Repository の3層を経由する。各層の責務を明確に分離し、レイヤーをスキップしない。
 
-**NG (Handler から直接 DB アクセス、責務が混在):**
+## NG例
 
 ```typescript
-// API Route から直接 Supabase にアクセス
+// NG: API Routeから直接Supabaseにアクセス
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
-  // Handler で直接 DB アクセス
+  // 問題: Handlerで直接DBアクセスを行っている
   const { data } = await supabase.from('products').select('*')
 
   return NextResponse.json(data)
@@ -24,18 +25,18 @@ export async function GET(request: NextRequest) {
 ```
 
 ```typescript
-// Service から直接 Supabase にアクセス
+// NG: ServiceからSupabaseに直接アクセス
 export async function getProducts(supabase: SupabaseClient) {
-  // Repository を経由せずに直接 DB アクセス
+  // 問題: Repositoryを経由せずに直接DBアクセスを行っている
   const { data } = await supabase.from('products').select('*')
   return data
 }
 ```
 
-**OK (Handler → Service → Repository を経由):**
+## OK例
 
 ```typescript
-// Handler層: src/app/api/products/route.ts
+// OK: Handler層 - src/app/api/products/route.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
@@ -46,7 +47,8 @@ import { ok, serverError } from '@/lib/api-response'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const products = await getProducts(supabase)  // Service を呼び出し
+    // 推奨: Serviceを呼び出し、Repositoryへのアクセスを委譲
+    const products = await getProducts(supabase)
     return ok(products)
   } catch (error) {
     return serverError()
@@ -55,25 +57,27 @@ export async function GET(request: NextRequest) {
 ```
 
 ```typescript
-// Service層: src/features/products/core/service.ts
+// OK: Service層 - src/features/products/core/service.ts
 import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { productRepository } from './repository'
 
 export async function getProducts(supabase: SupabaseClient) {
-  return productRepository.findMany(supabase)  // Repository を呼び出し
+  // 推奨: Repositoryを呼び出し、DBアクセスを委譲
+  return productRepository.findMany(supabase)
 }
 ```
 
 ```typescript
-// Repository層: src/features/products/core/repository.ts
+// OK: Repository層 - src/features/products/core/repository.ts
 import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const productRepository = {
   async findMany(supabase: SupabaseClient) {
+    // 推奨: Repositoryでのみデータアクセスを実行
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -85,23 +89,34 @@ export const productRepository = {
 }
 ```
 
-## 各層の責務
+## 理由
+
+3層アーキテクチャを採用する理由は以下の通りである：
+
+1. **責務の明確化**: 各層が単一の責務を持つことで、コードの理解と保守が容易になる
+2. **テスタビリティ**: 各層を独立してテストできる
+3. **変更の局所化**: データソースの変更はRepository層のみ、ビジネスロジックの変更はService層のみに影響
+4. **再利用性**: Serviceは複数のHandlerから呼び出し可能
+
+各層の責務は以下の通り：
 
 | 層 | ファイル | 責務 |
 |---|---------|------|
 | Handler | `app/api/*/route.ts` | リクエスト/レスポンス処理、バリデーション、認証 |
-| Service | `features/*/service.ts` | ビジネスロジック、複数 Repository の連携 |
-| Repository | `features/*/repository.ts` | データアクセス、Supabase クエリ |
+| Service | `features/*/service.ts` | ビジネスロジック、複数Repositoryの連携 |
+| Repository | `features/*/repository.ts` | データアクセス、Supabaseクエリ |
 
-## 例外: 単純な CRUD
+違反すると、責務分離が崩壊し、アーキテクチャパターン自体が成立しない。
 
-ビジネスロジックがない単純な CRUD でも、将来の拡張性のために3層を維持する:
+## 例外
+
+ビジネスロジックがない単純なCRUD操作でも、将来の拡張性のために3層を維持する：
 
 ```typescript
-// 単純でも Repository を経由
+// 単純な処理でもRepositoryを経由する
 export async function getProductById(supabase: SupabaseClient, id: string) {
   return productRepository.findById(supabase, id)
 }
 ```
 
-ビジネスロジックが追加された場合に Service 層で対応できる。
+ビジネスロジックが追加された場合に、Service層で対応できる。

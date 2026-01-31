@@ -1,30 +1,33 @@
 ---
+id: data-comment-required
 title: テーブル・カラムに日本語コメント必須
+category: データ
 impact: LOW
-impactDescription: DBコメントの有無は開発体験・スキーマ理解に関する推奨事項
-tags: database, comment, documentation
+tags: [database, comment, documentation]
 ---
 
-## テーブル・カラムに日本語コメント必須
+## ルール
 
-すべてのテーブルとカラムに日本語のコメント（説明）を付ける。
+すべてのテーブルとカラムに日本語のコメントを付ける。
 
-## 理由
-
-- Supabase Studio でカラムの意図がすぐにわかる
-- チームメンバーがスキーマを理解しやすい
-- コードとドキュメントの乖離を防ぐ
-
-## 構文
+## NG例
 
 ```sql
-COMMENT ON TABLE テーブル名 IS '説明文';
-COMMENT ON COLUMN テーブル名.カラム名 IS '説明文';
+-- NG: コメントなしでテーブルを作成
+CREATE TABLE orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) NOT NULL,
+  total_amount integer NOT NULL,
+  status text DEFAULT 'pending' NOT NULL
+);
+-- 問題: コメントがないため、カラムの意図や用途が不明確
+-- 問題: Supabase Studioでスキーマを確認する際に説明が表示されない
 ```
 
-## 良い例
+## OK例
 
 ```sql
+-- OK: テーブルとすべてのカラムにコメントを付ける
 CREATE TABLE orders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) NOT NULL,
@@ -48,19 +51,28 @@ COMMENT ON COLUMN orders.created_at IS '作成日時';
 COMMENT ON COLUMN orders.updated_at IS '更新日時';
 COMMENT ON COLUMN orders.create_user IS '作成者のユーザーID';
 COMMENT ON COLUMN orders.update_user IS '更新者のユーザーID';
+
+-- 推奨: 単位や取りうる値、参照先を明記することで理解しやすくなる
 ```
 
-## 悪い例
+## 理由
+
+データベースのコメントは以下の理由で重要である：
+
+- Supabase Studioでカラムの意図がすぐに確認できる
+- チームメンバーがスキーマを理解しやすくなる
+- コードとドキュメントの乖離を防ぐ
+
+違反時の影響：
+- カラムの用途や制約が不明確になり、開発効率が低下する
+- チーム間のコミュニケーションコストが増加する
+- スキーマの理解に時間がかかる
+
+## 構文
 
 ```sql
--- コメントなしでテーブルを作成
-CREATE TABLE orders (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) NOT NULL,
-  total_amount integer NOT NULL,
-  status text DEFAULT 'pending' NOT NULL
-);
--- コメントがないため、カラムの意図がわからない
+COMMENT ON TABLE テーブル名 IS '説明文';
+COMMENT ON COLUMN テーブル名.カラム名 IS '説明文';
 ```
 
 ## コメント記述のポイント

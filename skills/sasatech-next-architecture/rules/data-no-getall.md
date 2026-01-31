@@ -1,15 +1,16 @@
 ---
-title: 全件取得（getAll/findAll）の禁止
+id: data-no-getall
+title: 全件取得(getAll/findAll)の禁止
+category: データ
 impact: HIGH
-impactDescription: 全件取得はメモリ枯渇・DoS脆弱性を招き、保守性を大きく損なう
-tags: data-access, pagination, security, repository
+tags: [data-access, pagination, security, repository]
 ---
 
-## 全件取得（getAll/findAll）の禁止
+## ルール
 
 Repository層で上限なしの全件取得を行わない。必ずサーバー側で上限を強制する。
 
-**NG (上限なし、データ量増加でメモリ枯渇):**
+## NG例
 
 ```typescript
 // 上限なし - データ量増加でメモリ枯渇
@@ -25,7 +26,7 @@ async findMany(supabase: SupabaseClient, limit: number) {
 }
 ```
 
-**OK (MAX_LIMIT でサーバー側上限を強制):**
+## OK例
 
 ```typescript
 const MAX_LIMIT = 100
@@ -49,9 +50,13 @@ async findMany(
 }
 ```
 
-## 例外: マスタデータの全件取得
+## 理由
 
-以下の条件を**すべて**満たす場合のみ許可:
+全件取得はデータ量の増加に伴いメモリ枯渇やDoS脆弱性を招く。サーバー側で上限を強制することで、クライアントからの悪意ある大量リクエストを防ぎ、システムの安定性と保守性を確保する。
+
+## 例外
+
+以下の条件を**すべて**満たす場合のみ許可する:
 
 1. 件数が明確に制限されている（例: 都道府県47件）
 2. 増加しない、または増加が極めて緩やか

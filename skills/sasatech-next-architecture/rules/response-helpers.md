@@ -1,33 +1,34 @@
 ---
+id: response-helpers
 title: API レスポンスヘルパーの使用
+category: レスポンス
 impact: LOW
-impactDescription: レスポンスヘルパーの不使用はパターンの統一に関する推奨事項
-tags: response, api, handler
+tags: [response, api, handler]
 ---
 
-## API レスポンスヘルパーの使用
+## ルール
 
-Handler 層では直接 `NextResponse.json()` を使わず、レスポンスヘルパーを使用する。
+Handler 層では直接 `NextResponse.json()` を使わず、レスポンスヘルパーを使用する。これによりレスポンス形式の統一と保守性を確保する。
 
-**NG (直接 NextResponse、形式が不統一になりやすい):**
+## NG例
 
 ```typescript
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const products = await getProducts(supabase)
 
-  // 直接 NextResponse を使用 - 形式が不統一になりやすい
+  // NG: 直接 NextResponse を使用すると形式が不統一になる
   return NextResponse.json(products)
 }
 
 export async function POST(request: NextRequest) {
   // ...
-  // status の指定方法が不統一
+  // NG: status の指定方法がハンドラごとに異なる可能性がある
   return NextResponse.json(product, { status: 201 })
 }
 ```
 
-**OK (ヘルパーで統一された形式):**
+## OK例
 
 ```typescript
 import { ok, created, notFound, serverError } from '@/lib/api-response'
@@ -36,17 +37,31 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const products = await getProducts(supabase)
-    return ok(products)  // 統一された形式
+    // OK: レスポンスヘルパーを使用することで形式が統一される
+    return ok(products)
   } catch (error) {
+    // OK: エラーレスポンスも統一された形式で返す
     return serverError()
   }
 }
 
 export async function POST(request: NextRequest) {
   // ...
-  return created(product)  // 201 Created
+  // OK: 201 Created は created() ヘルパーで明示的に表現
+  return created(product)
 }
 ```
+
+## 理由
+
+レスポンスヘルパーを使用することで以下の利点がある：
+
+1. **形式の統一**: すべてのAPIエンドポイントで同じレスポンス構造を保証する
+2. **保守性の向上**: レスポンス形式の変更が一箇所で完結する
+3. **可読性の向上**: `ok()`, `created()`, `notFound()` などのヘルパー名が意図を明確にする
+4. **ステータスコードの統一**: HTTPステータスコードの指定方法が統一される
+
+違反した場合、レスポンス形式が不統一になり、フロントエンド側でのエラーハンドリングが複雑化する可能性がある。
 
 ## レスポンスヘルパー一覧
 

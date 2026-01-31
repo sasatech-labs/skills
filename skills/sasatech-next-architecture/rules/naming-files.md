@@ -3,7 +3,6 @@ id: naming-files
 title: ファイル・ディレクトリ命名規則
 category: naming
 impact: LOW
-impactDescription: ファイル命名規則の統一は開発体験・パターンの統一に関する推奨事項
 tags: [naming, files, directory, convention, kebab-case]
 ---
 
@@ -11,33 +10,41 @@ tags: [naming, files, directory, convention, kebab-case]
 
 すべてのファイル名・ディレクトリ名は **kebab-case** を使用する。
 
-**NG (PascalCase/snake_case/camelCase が混在):**
+## NG例
 
-```
+PascalCase/snake_case/camelCase が混在する命名は避ける。
+
+```plaintext
+# ディレクトリ名が統一されていない
 src/features/
-├── UserProfile/              # PascalCase
-├── order_items/              # snake_case
-└── productReviews/           # camelCase
+├── UserProfile/              # PascalCase - NG
+├── order_items/              # snake_case - NG
+└── productReviews/           # camelCase - NG
 
+# ファイル名が統一されていない
 src/components/
-├── UserCard.tsx              # PascalCase
-└── productList.tsx           # camelCase
+├── UserCard.tsx              # PascalCase - NG
+└── productList.tsx           # camelCase - NG
 ```
 
-**OK (全て kebab-case で統一):**
+## OK例
 
-```
+すべての命名を kebab-case に統一する。
+
+```plaintext
+# ディレクトリ名を kebab-case に統一
 src/features/
-├── user-profile/             # kebab-case
-├── order-items/              # kebab-case
-└── product-reviews/          # kebab-case
+├── user-profile/             # kebab-case - OK
+├── order-items/              # kebab-case - OK
+└── product-reviews/          # kebab-case - OK
 
+# ファイル名を kebab-case に統一
 src/components/
-├── user-card.tsx             # kebab-case
-└── product-list.tsx          # kebab-case
+├── user-card.tsx             # kebab-case - OK
+└── product-list.tsx          # kebab-case - OK
 ```
 
-## ファイル種別ごとの規則
+### ファイル種別ごとの規則
 
 | 種類 | 規則 | 例 |
 |------|------|-----|
@@ -49,7 +56,7 @@ src/components/
 | Repository | kebab-case | `repository.ts` |
 | テスト | 元ファイル名 + `.test` | `service.test.ts` |
 
-## ディレクトリ規則
+### ディレクトリ規則
 
 | 種類 | 規則 | 例 |
 |------|------|-----|
@@ -58,9 +65,9 @@ src/components/
 | API Route | kebab-case | `api/user-posts/` |
 | コンポーネント | kebab-case | `components/server/`, `components/client/` |
 
-## 例: Feature ディレクトリ
+### 例: Feature ディレクトリ
 
-```
+```plaintext
 src/features/products/
 ├── index.ts
 ├── core/
@@ -77,9 +84,9 @@ src/features/products/
 └── hooks.ts
 ```
 
-## 例: API Route
+### 例: API Route
 
-```
+```plaintext
 src/app/api/
 ├── products/
 │   ├── route.ts              # GET /api/products, POST /api/products
@@ -91,16 +98,33 @@ src/app/api/
     └── route.ts              # GET/PATCH /api/user-settings
 ```
 
-## コンポーネント内のエクスポート名
+### コンポーネント内のエクスポート名
 
-ファイル名は kebab-case、エクスポートする関数・コンポーネントは PascalCase:
+ファイル名は kebab-case、エクスポートする関数・コンポーネントは PascalCase とする。
 
 ```typescript
 // src/features/products/components/product-card.tsx
 export function ProductCard({ product }: ProductCardProps) {
-  // ...
+  // コンポーネント名は PascalCase で記述
 }
 ```
+
+## 理由
+
+### 一貫性の確保
+
+ファイル名とディレクトリ名を kebab-case に統一することで、以下の利点がある。
+
+1. **可読性の向上**: プロジェクト全体で統一された命名規則により、ファイル検索とナビゲーションが容易になる
+2. **クロスプラットフォーム互換性**: macOS は大文字小文字を区別しない場合があるが、Linux は区別する。kebab-case の使用により、プラットフォーム間での問題を回避できる
+3. **URL との整合性**: Next.js のファイルベースルーティングでは、ファイル名が URL パスになる。kebab-case は URL の一般的な規約と一致する
+4. **開発体験の向上**: 混在したケーススタイル（PascalCase、snake_case、camelCase）を避けることで、チーム全体の認知負荷を軽減する
+
+### 違反時の影響
+
+- コードベース全体での一貫性が損なわれる
+- 新規メンバーが既存のパターンを理解しにくくなる
+- ファイル検索時に予測可能性が低下する
 
 ## 例外
 
@@ -108,9 +132,9 @@ export function ProductCard({ product }: ProductCardProps) {
 
 ### Next.js の規約ファイル
 
-Next.js App Router では、以下の特殊ファイルはフレームワークの規約に従う：
+Next.js App Router では、以下の特殊ファイルはフレームワークの規約に従う。
 
-```
+```plaintext
 src/app/
 ├── layout.tsx              # ルートレイアウト
 ├── page.tsx                # トップページ
@@ -129,9 +153,9 @@ src/app/
 
 ### Dynamic Routing
 
-Next.js の動的ルーティングでは、角括弧 `[]` を使用したディレクトリ名はフレームワークの規約に従う：
+Next.js の動的ルーティングでは、角括弧 `[]` を使用したディレクトリ名はフレームワークの規約に従う。
 
-```
+```plaintext
 src/app/
 ├── products/
 │   └── [id]/               # 動的ルートセグメント
@@ -147,19 +171,5 @@ src/app/
         └── page.tsx
 ```
 
-角括弧内のパラメータ名（`id`、`slug` など）は、単一の単語を使用することを推奨する。複数単語が必要な場合は camelCase を使用する（例: `[userId]/`, `[postId]/`）。
+角括弧内のパラメータ名（`id`、`slug` など）は、単一の単語を使用することを推奨する。複数単語が必要な場合は camelCase を使用する（例: `[userId]/`、`[postId]/`）。
 
-## 理由（Why）
-
-### 一貫性の確保
-ファイル名とディレクトリ名を kebab-case に統一することで、以下の利点がある：
-
-1. **可読性の向上**: プロジェクト全体で統一された命名規則により、ファイル検索とナビゲーションが容易になる
-2. **クロスプラットフォーム互換性**: macOS は大文字小文字を区別しない場合があるが、Linux は区別する。kebab-case の使用により、プラットフォーム間での問題を回避できる
-3. **URL との整合性**: Next.js のファイルベースルーティングでは、ファイル名が URL パスになる。kebab-case は URL の一般的な規約と一致する
-4. **開発体験の向上**: 混在したケーススタイル（PascalCase、snake_case、camelCase）を避けることで、チーム全体の認知負荷を軽減する
-
-### 違反時の影響
-- コードベース全体での一貫性が損なわれる
-- 新規メンバーが既存のパターンを理解しにくくなる
-- ファイル検索時に予測可能性が低下する

@@ -1,15 +1,18 @@
 ---
+id: arch-external-services
 title: 外部サービス連携は Adapter 経由
+category: アーキテクチャ
 impact: HIGH
-impactDescription: 外部API依存の隔離が崩れると整合性・保守性を大きく損なう
-tags: architecture, adapter, external-api, stripe, resend
+tags: [architecture, adapter, external-api, stripe, resend]
 ---
 
-## 外部サービス連携は Adapter 経由
+## ルール
 
 外部サービス（Stripe、Resend、OpenAI など）への依存は `lib/adapters/` に配置し、Service 層から利用する。
 
-**NG (Service で直接 SDK を使用、依存が密結合):**
+## NG例
+
+**Service で直接 SDK を使用、依存が密結合:**
 
 ```typescript
 // src/features/payments/core/service.ts
@@ -27,7 +30,9 @@ export async function createPaymentIntent(amount: number) {
 }
 ```
 
-**OK (Adapter で外部依存を隔離、テスト容易):**
+## OK例
+
+**Adapter で外部依存を隔離、テスト容易:**
 
 ```typescript
 // src/lib/adapters/stripe/index.ts
@@ -67,6 +72,16 @@ export async function createPaymentIntent(amount: number) {
   return stripeAdapter.createPaymentIntent({ amount })
 }
 ```
+
+## 理由
+
+外部API依存を直接 Service 層に書くと、以下の問題が発生する：
+
+- **密結合**: 外部サービスの仕様変更がアプリケーション全体に波及する
+- **テスト困難**: Service テストで外部APIをモックする必要があり、テストが複雑になる
+- **保守性低下**: 同じ外部API呼び出しが複数箇所に散在し、変更時の影響範囲が大きい
+
+Adapter パターンで外部依存を隔離することで、整合性と保守性を確保する。
 
 ## Adapter の責務
 
