@@ -12,12 +12,12 @@ Feature-based Layer Architecture for Next.js (App Router + Supabase)
 ### レイヤー構成
 
 ```
-Handler (handler.ts)   リクエスト/レスポンス、バリデーション、認証
+Handler                 リクエスト/レスポンス、バリデーション、認証
         ↓
-Service               ビジネスロジック、複数 Repository 連携
+Service                 ビジネスロジック、複数 Repository 連携
         ↓
-Repository            データアクセス
-Adapter               外部 API 連携（Stripe, Resend 等）
+Repository              データアクセス
+Adapter                 外部 API 連携（Stripe, Resend 等）
 ```
 
 ### ディレクトリ構成
@@ -27,7 +27,7 @@ src/
 ├── app/                      # Next.js App Router
 │   ├── (auth)/               # 認証が必要なルートグループ
 │   ├── (public)/             # 公開ルートグループ
-│   └── api/                  # API Routes (Handler層)
+│   └── api/                  # API Routes (薄いエントリーポイント)
 │
 ├── features/                 # 機能単位のモジュール
 │   └── [feature]/
@@ -68,6 +68,10 @@ src/
 | ガイド | 説明 |
 |--------|------|
 | [architecture.md](guides/architecture.md) | Feature-based Layer Architecture の全体設計。レイヤー構成、責務分離、ディレクトリ構成 |
+| [architecture/handler.md](guides/architecture/handler.md) | Handler層の実装。リクエスト処理、バリデーション、認証チェック、エラーハンドリング |
+| [architecture/service.md](guides/architecture/service.md) | Service層の実装。ビジネスロジック、Repository/Adapter連携、トランザクション管理 |
+| [architecture/repository.md](guides/architecture/repository.md) | Repository層の実装。データアクセスの抽象化、Supabaseクエリのカプセル化 |
+| [architecture/adapter.md](guides/architecture/adapter.md) | Adapter層の実装。外部サービス（決済、メール、AI等）との連携をカプセル化 |
 | [testing.md](guides/testing.md) | レイヤーごとのテスト戦略。Unit / Integration テストの範囲とモック方針 |
 | [database.md](guides/database.md) | データベース設計。コメント規約、マイグレーション、Supabase との連携 |
 | [logging.md](guides/logging.md) | pino を使用した構造化ログの実装。レイヤーごとのログ出力方針 |

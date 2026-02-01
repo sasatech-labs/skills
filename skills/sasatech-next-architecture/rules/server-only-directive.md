@@ -8,7 +8,7 @@ tags: [server, security, next-js, bundling]
 
 ## ルール
 
-Service層とRepository層のファイルには必ず `import 'server-only'` を記述する。
+Handler層、Service層、Repository層、Adapter層のファイルには必ず `import 'server-only'` を記述する。
 
 ## NG例
 
@@ -52,12 +52,21 @@ export const productRepository = {
 
 ```typescript
 // src/app/api/products/route.ts
-import 'server-only'  // OK: API RouteでもServer-onlyを記述する
+import 'server-only'  // OK: API Routeでもserver-onlyを記述する
 
-import { getProducts } from '@/features/products/service'
+import { handleGetProducts } from '@/features/products'
 
-export async function GET() {
-  // ...
+export const GET = handleGetProducts
+```
+
+```typescript
+// src/features/products/adapter.ts
+import 'server-only'  // OK: Adapter層でもserver-onlyを記述する
+
+export const stripeAdapter = {
+  async createPayment(amount: number) {
+    // 外部APIとの連携処理
+  },
 }
 ```
 
@@ -65,18 +74,19 @@ export async function GET() {
 
 `server-only`を記述することで、サーバー専用コードのクライアントバンドルへの混入を防ぐ。`server-only`をインポートしたファイルをクライアントコンポーネントからインポートすると、ビルド時にエラーが発生する。これにより、機密情報の漏洩やバンドルサイズの肥大化を防止できる。
 
-server-onlyを欠如させると、サーバー専用コードがクライアントに混入し、整合性を大きく損なう。
+Handler、Service、Repository、Adapterの各層はサーバーサイドでのみ実行されるべきロジックを含む。server-onlyを欠如させると、サーバー専用コードがクライアントに混入し、整合性を大きく損なう。
 
 ## 対象ファイル
 
 | ファイル | server-only |
 |---------|-------------|
+| `handler.ts` (Handler層) | 必須 |
 | `service.ts` | 必須 |
 | `repository.ts` | 必須 |
-| API Route (`route.ts`) | 必須 |
+| `adapter.ts` | 必須 |
 | `schema.ts` | 不要（フロントエンドでも使用） |
-| `fetcher.ts` | 不要（クライアント専用） |
-| `hooks.ts` | 不要（クライアント専用） |
+| `fetcher.ts` | 不要（クライアントでも使用） |
+| `hooks.ts` | 不要（クライアントでも使用） |
 
 ## 検出方法
 

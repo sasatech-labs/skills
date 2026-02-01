@@ -73,18 +73,18 @@ LOG_LEVEL=info
 ### Handler 層
 
 ```typescript
-// src/app/api/products/route.ts
+// src/features/products/core/handler.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
 import { logger, createRequestLogger } from '@/lib/logger'
-import { getProducts, createProduct } from '@/features/products'
+import { getProducts, createProduct } from './service'
 import { createClient, getUser } from '@/lib/supabase/server'
 import { ok, created, serverError } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
-import { createProductSchema } from '@/features/products/core/schema'
+import { createProductSchema } from './schema'
 
-export async function GET(request: NextRequest) {
+export async function handleGetProducts(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const supabase = await createClient()
   const user = await getUser(supabase)
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function handleCreateProduct(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const supabase = await createClient()
   const user = await getUser(supabase)

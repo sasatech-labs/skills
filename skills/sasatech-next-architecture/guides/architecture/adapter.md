@@ -1213,7 +1213,6 @@ export const stripeAdapter = {
 
 ```typescript
 // src/app/api/webhooks/stripe/route.ts
-import 'server-only'
 import { NextRequest } from 'next/server'
 import { stripeAdapter } from '@/lib/adapters/stripe'
 import { handlePaymentSuccess } from '@/features/payments'

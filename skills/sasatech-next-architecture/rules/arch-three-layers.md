@@ -36,15 +36,23 @@ export async function getProducts(supabase: SupabaseClient) {
 ## OK例
 
 ```typescript
-// OK: Handler層 - src/app/api/products/route.ts
+// OK: API Route - src/app/api/products/route.ts
+import { handleGetProducts } from '@/features/products'
+
+// API Routeは薄いWrapper、Handler関数を呼び出すだけ
+export const GET = handleGetProducts
+```
+
+```typescript
+// OK: Handler層 - src/features/products/core/handler.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
-import { getProducts } from '@/features/products'
 import { createClient } from '@/lib/supabase/server'
 import { ok, serverError } from '@/lib/api-response'
+import { getProducts } from './service'
 
-export async function GET(request: NextRequest) {
+export async function handleGetProducts(request: NextRequest) {
   try {
     const supabase = await createClient()
     // 推奨: Serviceを呼び出し、Repositoryへのアクセスを委譲
@@ -102,9 +110,10 @@ export const productRepository = {
 
 | 層 | ファイル | 責務 |
 |---|---------|------|
-| Handler | `app/api/*/route.ts` | リクエスト/レスポンス処理、バリデーション、認証 |
-| Service | `features/*/service.ts` | ビジネスロジック、複数Repositoryの連携 |
-| Repository | `features/*/repository.ts` | データアクセス、Supabaseクエリ |
+| API Route | `app/api/*/route.ts` | 薄いエントリーポイント（Handler関数を呼び出すだけ） |
+| Handler | `features/*/core/handler.ts` | リクエスト/レスポンス処理、バリデーション、認証 |
+| Service | `features/*/core/service.ts` | ビジネスロジック、複数Repositoryの連携 |
+| Repository | `features/*/core/repository.ts` | データアクセス、Supabaseクエリ |
 
 違反すると、責務分離が崩壊し、アーキテクチャパターン自体が成立しない。
 
