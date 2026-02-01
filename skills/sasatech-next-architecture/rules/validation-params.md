@@ -1,15 +1,16 @@
 ---
+id: validation-params
 title: URL パラメータのバリデーション
+category: バリデーション
 impact: MEDIUM
-impactDescription: 不正なパラメータによるエラーを早期検出
-tags: validation, zod, handler, api
+tags: [validation, zod, handler, api]
 ---
 
-## URL パラメータのバリデーション
+## ルール
 
-動的ルートのパラメータは Zod スキーマでバリデーションする。
+動的ルートのパラメータはZodスキーマでバリデーションする。
 
-**NG (バリデーションなし、不正な ID でクエリ実行):**
+## NG例
 
 ```typescript
 // src/app/api/products/[id]/route.ts
@@ -17,7 +18,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // バリデーションなしで直接使用
+  // NG: バリデーションなしで直接使用
   const supabase = await createClient()
   const product = await getProductById(supabase, params.id)
 
@@ -25,9 +26,10 @@ export async function GET(
 }
 ```
 
-**OK (validateParams で UUID 形式を検証):**
+## OK例
 
 ```typescript
+// src/app/api/products/[id]/route.ts
 import { validateParams } from '@/lib/validation'
 import { productIdSchema } from '@/features/products/core/schema'
 import { ok, notFound } from '@/lib/api-response'
@@ -36,7 +38,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // パラメータバリデーション
+  // OK: validateParamsでUUID形式を検証
   const validation = validateParams(params, productIdSchema)
   if (!validation.success) {
     return validation.response  // 400 Bad Request
@@ -53,16 +55,26 @@ export async function GET(
 }
 ```
 
-## ID スキーマの定義
-
 ```typescript
 // src/features/products/core/schema.ts
+// OK: IDスキーマを定義
 export const productIdSchema = z.object({
   id: z.string().uuid('無効なIDです'),
 })
 ```
 
-## validateParams の実装
+## 理由
+
+パラメータ未検証は不正値でのクエリ実行を招き、コードの品質と一貫性を低下させる。バリデーションにより以下を実現する：
+
+- 型安全性の向上
+- 不正なデータベースクエリの防止
+- 一貫したエラーハンドリング
+- 明確なAPIコントラクト
+
+## 参考実装
+
+### validateParamsの実装
 
 ```typescript
 // src/lib/validation.ts
@@ -92,7 +104,7 @@ export function validateParams<T>(
 }
 ```
 
-## ボディとパラメータ両方のバリデーション
+### ボディとパラメータ両方のバリデーション
 
 ```typescript
 export async function PATCH(
@@ -122,19 +134,20 @@ export async function PATCH(
 }
 ```
 
-## クエリパラメータのバリデーション
+### クエリパラメータのバリデーション
 
 ```typescript
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const params = Object.fromEntries(searchParams.entries())
 
+  // クエリパラメータの検証
   const validation = validateParams(params, productSearchSchema)
   if (!validation.success) {
     return validation.response
   }
 
-  // validation.data は ProductSearchParams 型
+  // validation.dataはProductSearchParams型
   // ...
 }
 ```

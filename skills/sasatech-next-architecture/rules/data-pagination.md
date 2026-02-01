@@ -1,21 +1,22 @@
 ---
+id: data-pagination
 title: ページネーション必須
-impact: CRITICAL
-impactDescription: 大量データでもレスポンス時間を一定に保つ
-tags: data-access, pagination, repository, api
+category: データ
+impact: HIGH
+tags: [data-access, pagination, repository, api]
 ---
 
-## ページネーション必須
+## ルール
 
 リスト取得APIは必ずページネーションを実装する。
 
-**NG (全件返却、大量データでレスポンス遅延):**
+## NG例
 
 ```typescript
 // Handler
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
-  const products = await getProducts(supabase)  // 全件返却
+  const products = await getProducts(supabase)  // 問題: 全件返却、大量データでレスポンス遅延
   return ok(products)
 }
 
@@ -26,7 +27,7 @@ async findMany(supabase: SupabaseClient): Promise<Product[]> {
 }
 ```
 
-**OK (ページネーション付きで総件数を返却):**
+## OK例
 
 ```typescript
 // Handler
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const result = await getProducts(supabase, { page, limit })
 
-  return paginated(result.data, result.pagination)
+  return paginated(result.data, result.pagination)  // ページネーション付きレスポンス
 }
 
 // Service
@@ -61,9 +62,9 @@ async findMany(
 
   const { data, error, count } = await supabase
     .from('products')
-    .select('*', { count: 'exact' })
+    .select('*', { count: 'exact' })  // 総件数を取得
     .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+    .range(offset, offset + limit - 1)  // ページング範囲を指定
 
   if (error) throw new AppError(error.message, 500)
 
@@ -79,11 +80,7 @@ async findMany(
     },
   }
 }
-```
 
-## ページネーションレスポンス構造
-
-```typescript
 // 型定義
 export type PaginatedResult<T> = {
   data: T[]
@@ -94,24 +91,19 @@ export type PaginatedResult<T> = {
     totalPages: number
   }
 }
-
-// レスポンス例
-{
-  "data": [...],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 150,
-    "totalPages": 8
-  }
-}
 ```
 
-## 検索スキーマ
+## 理由
 
-```typescript
-export const paginationSchema = z.object({
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(20),
-})
-```
+ページネーションを実装しない場合、大量データでの性能劣化を招く。全件取得はデータベースとネットワークに負荷をかけ、レスポンス時間が増大する。これは保守性を大きく損ない、スケーラビリティを阻害する。
+
+ページネーションは以下を実現する：
+
+- データ取得量の制限によるパフォーマンス向上
+- クライアント側での段階的なデータ表示
+- データベース負荷の軽減
+- 総件数の提供によるUI/UX改善
+
+## 参照
+
+- [data-no-getall.md](data-no-getall.md) - 全件取得禁止ルール

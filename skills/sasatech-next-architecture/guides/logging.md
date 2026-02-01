@@ -1,6 +1,19 @@
 # ログ戦略ガイド
 
-pino を使用した構造化ログの実装ガイド。
+## 概要
+
+このガイドでは、pinoを使用した構造化ログの実装方法を説明する。リクエストトレーシング、レイヤー別のログ出力、機密情報のフィルタリングなど、本番環境で必要なログ戦略を扱う。
+
+## 設計思想
+
+構造化ログを採用する理由は、以下の通り：
+
+- **デバッグ効率の向上**: JSON形式で出力することで、ログ解析ツールでの検索、フィルタリングが容易になる
+- **監視の自動化**: 構造化されたログは、監視システムと連携しやすく、アラートやメトリクスの収集が簡単になる
+- **トラブルシューティングの迅速化**: requestIdやuserIdなどのコンテキスト情報を含めることで、問題の原因を素早く特定できる
+- **本番環境での運用**: Vercel Log Drainなどの外部ログサービスと統合でき、長期的なログ保存と分析が可能になる
+
+pinoは軽量で高速なロガーであり、Next.jsのサーバーサイド環境に最適である。開発環境ではpino-prettyを使用して読みやすい形式で出力し、本番環境ではJSON形式で出力する。
 
 ## セットアップ
 
@@ -60,18 +73,18 @@ LOG_LEVEL=info
 ### Handler 層
 
 ```typescript
-// src/app/api/products/route.ts
+// src/features/products/core/handler.ts
 import 'server-only'
 
 import { NextRequest } from 'next/server'
 import { logger, createRequestLogger } from '@/lib/logger'
-import { getProducts, createProduct } from '@/features/products'
+import { getProducts, createProduct } from './service'
 import { createClient, getUser } from '@/lib/supabase/server'
 import { ok, created, serverError } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
-import { createProductSchema } from '@/features/products/core/schema'
+import { createProductSchema } from './schema'
 
-export async function GET(request: NextRequest) {
+export async function handleGetProducts(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const supabase = await createClient()
   const user = await getUser(supabase)
@@ -89,7 +102,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function handleCreateProduct(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const supabase = await createClient()
   const user = await getUser(supabase)

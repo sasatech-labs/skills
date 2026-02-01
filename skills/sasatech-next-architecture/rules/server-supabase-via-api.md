@@ -1,15 +1,16 @@
 ---
+id: server-supabase-via-api
 title: クライアントから Supabase 直接使用禁止
+category: サーバーサイド保護
 impact: CRITICAL
-impactDescription: セキュリティとアーキテクチャの一貫性を確保
-tags: server, security, supabase, architecture
+tags: [server, security, supabase, architecture]
 ---
 
-## クライアントから Supabase 直接使用禁止
+## ルール
 
 クライアントコンポーネントから Supabase を直接使用しない。必ず API Route を経由する。
 
-**NG (環境変数がクライアントに露出):**
+## NG例
 
 ```typescript
 // src/features/products/components/product-list.tsx
@@ -23,7 +24,9 @@ export function ProductList() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  // クライアントから直接 Supabase にアクセス
+  // NG: クライアントから直接 Supabase にアクセスしている
+  // NG: 環境変数がクライアントに露出する
+  // NG: サーバーサイドのバリデーションをバイパスしている
   const fetchProducts = async () => {
     const { data } = await supabase.from('products').select('*')
     return data
@@ -33,7 +36,7 @@ export function ProductList() {
 }
 ```
 
-**OK (Hook + Fetcher + API Route でデータ取得):**
+## OK例
 
 ```typescript
 // src/features/products/components/product-list.tsx
@@ -42,7 +45,7 @@ export function ProductList() {
 import { useProducts } from '../hooks'
 
 export function ProductList() {
-  // API Route を経由してデータ取得
+  // OK: API Route を経由してデータ取得する
   const { products, isLoading, error } = useProducts()
 
   if (isLoading) return <div>Loading...</div>
@@ -66,6 +69,7 @@ import useSWR from 'swr'
 import { productsFetcher } from './fetcher'
 
 export function useProducts() {
+  // OK: Fetcher経由でAPI Routeを呼び出す
   const { data, error, isLoading } = useSWR(
     '/api/products',
     () => productsFetcher.getAll()
@@ -86,42 +90,39 @@ import { fetchPaginated } from '@/lib/fetcher'
 import type { Product } from './core/schema'
 
 export const productsFetcher = {
+  // OK: API Routeのエンドポイントを呼び出す
   getAll(page = 1, limit = 20) {
     return fetchPaginated<Product>(`/api/products?page=${page}&limit=${limit}`)
   },
 }
 ```
 
-## データフロー
-
-```
-クライアント (React Component)
-    ↓ fetch('/api/products')
-API Route (Handler層)
-    ↓ createClient()
-Service層
-    ↓
-Repository層
-    ↓ supabase.from('products')...
-Supabase
-```
-
 ## 理由
 
-1. **セキュリティ**: 環境変数をクライアントに露出しない
-2. **一貫性**: Handler → Service → Repository の3層を維持
-3. **バリデーション**: サーバーサイドで入力検証を行える
-4. **ログ**: サーバーサイドでリクエストを記録できる
-5. **キャッシュ**: サーバーサイドでキャッシュ戦略を制御できる
+クライアントから Supabase への直接アクセスを禁止する理由は以下の通りである。
+
+**セキュリティ**
+環境変数がクライアントに露出すると、データベースの接続情報が漏洩するリスクがある。API Route を経由することで、サーバーサイドのみが Supabase にアクセスし、認証情報を保護できる。
+
+**アーキテクチャの一貫性**
+3層構成（Handler → Service → Repository）を維持することで、責務の分離が明確になる。クライアントが直接データベースにアクセスすると、この設計パターンが成立しなくなる。
+
+**バリデーション**
+API Route でリクエストを受け取ることで、サーバーサイドで入力検証を行える。クライアントからの直接アクセスでは、バリデーションをバイパスされる可能性がある。
+
+**ログとキャッシュ**
+サーバーサイドでリクエストを記録し、キャッシュ戦略を制御できる。これにより、パフォーマンスの最適化とデバッグが容易になる。
 
 ## 例外
 
-認証フローでは `@supabase/ssr` のクライアントを使用する場合がある:
+認証フローでは `@supabase/ssr` のクライアントを使用する場合がある。
 
 ```typescript
 // src/features/auth/components/login-form.tsx
 'use client'
 
-// 認証のみ例外的にクライアントサイドで Supabase を使用
-// ただし、データ操作は API Route 経由
+// 認証のみ例外的にクライアントサイドで Supabase を使用する
+// ただし、データ操作は API Route を経由する
 ```
+
+認証機能は Supabase の認証 API を直接使用する必要があるため、例外として許可される。ただし、データの取得や更新は API Route を経由する必要がある。

@@ -1,15 +1,16 @@
 ---
+id: validation-body
 title: リクエストボディのバリデーション
+category: バリデーション
 impact: MEDIUM
-impactDescription: 不正な入力によるエラーを早期検出
-tags: validation, zod, handler, api
+tags: [validation, zod, handler, api]
 ---
 
-## リクエストボディのバリデーション
+## ルール
 
 POST/PATCH リクエストのボディは必ず Zod スキーマでバリデーションする。
 
-**NG (バリデーションなし、不正な入力がそのまま処理される):**
+## NG例
 
 ```typescript
 export async function POST(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**OK (validateBody で型安全にバリデーション):**
+## OK例
 
 ```typescript
 import { validateBody } from '@/lib/validation'
@@ -46,6 +47,17 @@ export async function POST(request: NextRequest) {
   }
 }
 ```
+
+## 理由
+
+バリデーションを行わない場合、不正な入力値がそのまま処理される。これにより、以下の問題が発生する：
+
+- **型安全性の欠如**: TypeScript の型推論が機能せず、ランタイムエラーが発生する可能性がある
+- **セキュリティリスク**: 不正なデータが DB に保存され、データの整合性が損なわれる
+- **エラーハンドリングの複雑化**: バリデーションエラーと実行時エラーの区別が困難になる
+- **一貫性の欠如**: API レスポンスのエラー形式が統一されず、フロントエンドでの処理が複雑化する
+
+Zod スキーマによるバリデーションを必須とすることで、型安全性とデータの整合性を保証し、コード品質を維持する。
 
 ## validateBody の実装
 

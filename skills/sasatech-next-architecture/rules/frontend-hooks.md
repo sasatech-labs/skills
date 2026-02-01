@@ -1,18 +1,19 @@
 ---
+id: frontend-hooks
 title: SWR Hooks パターン
+category: フロントエンド
 impact: LOW
-impactDescription: データフェッチの状態管理を簡潔化
-tags: frontend, hooks, swr, client
+tags: [frontend, hooks, swr, client]
 ---
 
-## SWR Hooks パターン
+## ルール
 
-Feature ごとに `hooks.ts` を作成し、SWR を使用したデータフェッチ Hook を提供する。
+Featureごとに`hooks.ts`を作成し、SWRを使用したデータフェッチHookを提供する。コンポーネント内で直接useState/useEffectによる複雑な状態管理を行わない。
 
-**NG (コンポーネント内で複雑な状態管理):**
+## NG例
 
 ```typescript
-// コンポーネント内で複雑な状態管理
+// コンポーネント内でuseState/useEffectを使用した複雑な状態管理
 export function ProductList() {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -26,11 +27,12 @@ export function ProductList() {
       .finally(() => setIsLoading(false))
   }, [])
 
+  // キャッシュ、重複排除、自動再検証が実装されていない
   // ...
 }
 ```
 
-**OK (SWR Hook でキャッシュ・重複排除・自動再検証):**
+## OK例
 
 ```typescript
 // src/features/products/hooks.ts
@@ -41,6 +43,7 @@ import { productsFetcher } from './fetcher'
 import type { Product } from './core/schema'
 import type { Pagination } from '@/types/api'
 
+// SWRを使用したデータフェッチHookを提供
 export function useProducts(page = 1, limit = 20) {
   const { data, error, isLoading, mutate } = useSWR(
     ['products', page, limit],
@@ -73,7 +76,7 @@ export function useProduct(id: string) {
 ```
 
 ```typescript
-// コンポーネントはシンプルに
+// コンポーネントはHookを使用してシンプルになる
 export function ProductList() {
   const { products, pagination, isLoading, error } = useProducts()
 
@@ -90,103 +93,13 @@ export function ProductList() {
 }
 ```
 
-## ミューテーション Hook
+## 理由
 
-```typescript
-// src/features/products/hooks.ts
-import { useState } from 'react'
-import { useSWRConfig } from 'swr'
-import { productsFetcher } from './fetcher'
-import { ApiError } from '@/lib/api-error'
-import type { CreateProductInput } from './core/schema'
+SWR Hooksパターンを使用することで、以下の利点が得られる：
 
-export function useCreateProduct() {
-  const { mutate } = useSWRConfig()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<ApiError | null>(null)
+1. **自動キャッシュ管理**: データをキャッシュし、高速に表示する
+2. **重複排除**: 同じキーへのリクエストを自動で重複排除し、無駄なAPI呼び出しを防ぐ
+3. **自動再検証**: フォーカス時、再接続時に自動でデータを更新し、常に最新の状態を保つ
+4. **コンポーネントの簡素化**: 状態管理のロジックをHookに分離し、コンポーネントは表示のみに集中できる
 
-  const create = async (input: CreateProductInput) => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const product = await productsFetcher.create(input)
-      // キャッシュを再検証
-      await mutate((key) => Array.isArray(key) && key[0] === 'products')
-      return product
-    } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError('Unknown error', 500)
-      setError(apiError)
-      return null
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  return { create, isLoading, error }
-}
-
-export function useUpdateProduct() {
-  const { mutate } = useSWRConfig()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<ApiError | null>(null)
-
-  const update = async (id: string, input: Partial<CreateProductInput>) => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const product = await productsFetcher.update(id, input)
-      await mutate(['product', id])
-      await mutate((key) => Array.isArray(key) && key[0] === 'products')
-      return product
-    } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError('Unknown error', 500)
-      setError(apiError)
-      return null
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  return { update, isLoading, error }
-}
-
-export function useDeleteProduct() {
-  const { mutate } = useSWRConfig()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<ApiError | null>(null)
-
-  const remove = async (id: string) => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      await productsFetcher.delete(id)
-      await mutate((key) => Array.isArray(key) && key[0] === 'products')
-      return true
-    } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError('Unknown error', 500)
-      setError(apiError)
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  return { remove, isLoading, error }
-}
-```
-
-## セットアップ
-
-```bash
-npm install swr
-```
-
-## SWR の利点
-
-1. **自動再検証**: フォーカス時、再接続時に自動でデータを更新
-2. **重複排除**: 同じキーへのリクエストを自動で重複排除
-3. **キャッシュ**: データをキャッシュし、高速に表示
-4. **楽観的更新**: `mutate` で即座にUIを更新
+このパターンを使用しない場合、各コンポーネントで重複した状態管理ロジックを実装することになり、保守性とパフォーマンスが低下する

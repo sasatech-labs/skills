@@ -1,15 +1,16 @@
 ---
+id: schema-zod-infer
 title: z.infer で Input 型を導出
-impact: HIGH
-impactDescription: スキーマと型の同期を自動化
-tags: schema, types, zod, validation
+category: スキーマ・型定義
+impact: MEDIUM
+tags: [schema, types, zod, validation]
 ---
 
-## z.infer で Input 型を導出
+## ルール
 
 Input 型は Zod スキーマから `z.infer` で導出する。手動で型定義しない。
 
-**NG (手動で型定義、スキーマと乖離するリスク):**
+## NG例
 
 ```typescript
 // schema.ts
@@ -19,7 +20,8 @@ export const createProductSchema = z.object({
   description: z.string().optional(),
 })
 
-// 手動で型定義 - スキーマと乖離するリスク
+// NG: 手動で型定義している
+// スキーマの変更時に型定義の更新を忘れる可能性がある
 export type CreateProductInput = {
   name: string
   price: number
@@ -27,28 +29,9 @@ export type CreateProductInput = {
 }
 ```
 
-**OK (z.infer で自動導出、常に同期):**
-
 ```typescript
-// schema.ts
-export const createProductSchema = z.object({
-  name: z.string().min(1),
-  price: z.number().min(0),
-  description: z.string().optional(),
-})
-
-// スキーマから自動導出
-export type CreateProductInput = z.infer<typeof createProductSchema>
-```
-
-## Update スキーマの作成
-
-`partial()` を使用して重複を避ける:
-
-**NG (重複定義、変更時に両方を修正必要):**
-
-```typescript
-// create と update で同じフィールドを2回定義
+// NG: create と update で同じフィールドを重複定義している
+// 変更時に両方を修正する必要があり、保守性が低い
 export const createProductSchema = z.object({
   name: z.string().min(1),
   price: z.number().min(0),
@@ -60,10 +43,24 @@ export const updateProductSchema = z.object({
 })
 ```
 
-**OK (partial() で再利用):**
+## OK例
 
 ```typescript
-// create スキーマを再利用
+// schema.ts
+export const createProductSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().min(0),
+  description: z.string().optional(),
+})
+
+// OK: z.infer でスキーマから自動導出する
+// スキーマの変更が自動的に型に反映される
+export type CreateProductInput = z.infer<typeof createProductSchema>
+```
+
+```typescript
+// OK: partial() を使用して create スキーマを再利用する
+// スキーマの変更が自動的に update スキーマにも反映される
 export const createProductSchema = z.object({
   name: z.string().min(1),
   price: z.number().min(0),
@@ -75,9 +72,8 @@ export type CreateProductInput = z.infer<typeof createProductSchema>
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
 ```
 
-## よく使うパターン
-
 ```typescript
+// OK: よく使うパターンの実装例
 import { z } from 'zod'
 
 // 基本的なスキーマ
@@ -105,8 +101,16 @@ export const productSearchSchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
 })
 
-// 型の導出
+// z.infer で型を導出
 export type CreateProductInput = z.infer<typeof createProductSchema>
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
 export type ProductSearchParams = z.infer<typeof productSearchSchema>
 ```
+
+## 理由
+
+手動で型定義を行うと、スキーマと型定義が乖離するリスクがある。スキーマのバリデーションルールを変更した際に、型定義の更新を忘れると、実行時エラーや予期しない動作を引き起こす可能性がある。
+
+`z.infer` を使用することで、スキーマが唯一の情報源（Single Source of Truth）となり、型定義とバリデーションルールが常に同期する。これにより、コードの一貫性と保守性が向上する。
+
+また、`partial()` や `pick()`、`omit()` などのZodのユーティリティメソッドを活用することで、スキーマの重複を避け、DRY原則に従った実装が可能になる。
