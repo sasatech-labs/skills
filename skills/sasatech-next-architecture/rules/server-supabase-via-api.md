@@ -8,7 +8,7 @@ tags: [server, security, supabase, architecture]
 
 ## ルール
 
-クライアントコンポーネントから Supabase を直接使用しない。必ず API Route を経由する。
+クライアントコンポーネントから Supabaseを直接使用しない。必ず Repositoryを経由する。
 
 ## NG例
 
@@ -62,7 +62,7 @@ export function ProductList() {
 ```
 
 ```typescript
-// src/features/products/hooks.ts
+// src/features/products/core/hooks.ts
 'use client'
 
 import useSWR from 'swr'
@@ -85,9 +85,9 @@ export function useProducts() {
 ```
 
 ```typescript
-// src/features/products/fetcher.ts
+// src/features/products/core/fetcher.ts
 import { fetchPaginated } from '@/lib/fetcher'
-import type { Product } from './core/schema'
+import type { Product } from './schema'
 
 export const productsFetcher = {
   // OK: API Routeのエンドポイントを呼び出す

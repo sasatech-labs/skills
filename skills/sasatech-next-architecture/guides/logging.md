@@ -414,5 +414,6 @@ export const logger = pino({
 
 ## 関連ルール
 
-- [logging-strategy](../rules/logging-strategy.md) - ログ戦略ルール
-- [error-apperror](../rules/error-apperror.md) - エラーハンドリング
+- [arch-logging-strategy](../rules/arch-logging-strategy.md) - 構造化ログルール
+- [arch-logging-levels](../rules/arch-logging-levels.md) - ログレベルの使い分けルール
+- [response-apperror](../rules/response-apperror.md) - エラーハンドリング

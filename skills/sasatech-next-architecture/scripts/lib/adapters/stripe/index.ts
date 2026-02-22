@@ -12,14 +12,7 @@ import type {
   Subscription,
 } from './types'
 
-export type { PaymentIntent, Customer, CheckoutSession, Subscription }
-export type {
-  CreatePaymentIntentInput,
-  CreateCustomerInput,
-  CreateCheckoutSessionInput,
-}
-
-export const stripeAdapter = {
+const _stripeAdapter = {
   // ========================================
   // Payment Intent
   // ========================================
@@ -218,3 +211,11 @@ export const stripeAdapter = {
     }
   },
 }
+
+export type { PaymentIntent, Customer, CheckoutSession, Subscription }
+export type {
+  CreatePaymentIntentInput,
+  CreateCustomerInput,
+  CreateCheckoutSessionInput,
+}
+export const stripeAdapter = _stripeAdapter

@@ -437,3 +437,10 @@ export default defineConfig({
 2. **バリデーション** - 入力値の検証ロジック
 3. **エラーハンドリング** - 異常系の挙動
 4. **境界値** - 上限/下限、空配列、null など
+
+## 関連ルール
+
+- [test-layer-mocking](../rules/test-layer-mocking.md) - 各レイヤーは直下の依存のみをモック
+- [test-server-only](../rules/test-server-only.md) - server-onlyのテスト環境モック
+- [test-file-location](../rules/test-file-location.md) - テストファイルの配置ルール
+- [test-naming](../rules/test-naming.md) - テストの命名ルール

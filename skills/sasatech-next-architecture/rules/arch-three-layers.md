@@ -8,7 +8,7 @@ tags: [architecture, layers, handler, service, repository, adapter]
 
 ## ルール
 
-API RouteからSupabaseまで、Handler → Service → Repository の3層を経由する。各層の責務を明確に分離し、レイヤーをスキップしない。
+アプリケーションは Handler → Service → Repository / Adapter の層構成を経由する。CSR（API Route経由）では Handler → Service → Repository / Adapter の3層を通過する。SSR（Server Components）では Service → Repository / Adapter を直接呼び出し、Handler層を経由しない。各層の責務を明確に分離し、レイヤーをスキップしない。
 
 ## NG例
 
@@ -35,6 +35,8 @@ export async function getProducts(supabase: SupabaseClient) {
 
 ## OK例
 
+### CSRパス: API Route → Handler → Service → Repository
+
 ```typescript
 // OK: API Route - src/app/api/products/route.ts
 import { handleGetProducts } from '@/features/products'
@@ -47,21 +49,17 @@ export const GET = handleGetProducts
 // OK: Handler層 - src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, serverError } from '@/lib/api-response'
+import { ok } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
-export async function handleGetProducts(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    // 推奨: Serviceを呼び出し、Repositoryへのアクセスを委譲
-    const products = await getProducts(supabase)
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
+// withHTTPErrorでラップし、エラーハンドリングを統一する
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return ok(products)
+})
 ```
 
 ```typescript
@@ -97,29 +95,65 @@ export const productRepository = {
 }
 ```
 
+### Adapter層（外部API連携）
+
+```typescript
+// OK: Adapter層 - src/lib/adapters/stripe/index.ts
+import 'server-only'
+
+import { stripe } from './client'
+import { handleStripeError } from './errors'
+import type { CreatePaymentIntentInput, PaymentIntent } from './types'
+
+// 外部APIのエラーをAppErrorに変換し、アプリケーション型を返す
+export const stripeAdapter = {
+  async createPaymentIntent(input: CreatePaymentIntentInput): Promise<PaymentIntent> {
+    try {
+      const intent = await stripe.paymentIntents.create({
+        amount: input.amount,
+        currency: input.currency ?? 'jpy',
+      })
+
+      return {
+        id: intent.id,
+        amount: intent.amount,
+        currency: intent.currency,
+        status: intent.status,
+        clientSecret: intent.client_secret!,
+      }
+    } catch (error) {
+      throw handleStripeError(error)
+    }
+  },
+}
+```
+
 ## 理由
 
-3層アーキテクチャを採用する理由は以下の通りである：
+レイヤードアーキテクチャを採用する理由は以下の通りである：
 
 1. **責務の明確化**: 各層が単一の責務を持つことで、コードの理解と保守が容易になる
 2. **テスタビリティ**: 各層を独立してテストできる
 3. **変更の局所化**: データソースの変更はRepository層のみ、ビジネスロジックの変更はService層のみに影響
-4. **再利用性**: Serviceは複数のHandlerから呼び出し可能
+4. **再利用性**: Serviceは複数のHandlerから呼び出し可能。SSR/CSR両パスから同じService関数を使用する
 
 各層の責務は以下の通り：
 
 | 層 | ファイル | 責務 |
 |---|---------|------|
 | API Route | `app/api/*/route.ts` | 薄いエントリーポイント（Handler関数を呼び出すだけ） |
-| Handler | `features/*/core/handler.ts` | リクエスト/レスポンス処理、バリデーション、認証 |
-| Service | `features/*/core/service.ts` | ビジネスロジック、複数Repositoryの連携 |
+| Handler | `features/*/core/handler.ts` | リクエスト/レスポンス処理、バリデーション、楽観的認証 |
+| Service | `features/*/core/service.ts` | ビジネスロジック、厳密な認可、Repository/Adapterの連携 |
 | Repository | `features/*/core/repository.ts` | データアクセス、Supabaseクエリ |
+| Adapter | `features/*/core/adapter.ts` | 外部API連携（Stripe, Resend等）。Repositoryと同階層 |
 
 違反すると、責務分離が崩壊し、アーキテクチャパターン自体が成立しない。
 
 ## 例外
 
-ビジネスロジックがない単純なCRUD操作でも、将来の拡張性のために3層を維持する：
+### 単純なCRUD操作
+
+ビジネスロジックがない単純なCRUD操作でも、将来の拡張性のために層構成を維持する：
 
 ```typescript
 // 単純な処理でもRepositoryを経由する
@@ -129,3 +163,23 @@ export async function getProductById(supabase: SupabaseClient, id: string) {
 ```
 
 ビジネスロジックが追加された場合に、Service層で対応できる。
+
+### SSR（Server Components）
+
+SSRでもfetcher経由でAPI Routeを呼び出す。データ取得経路はSSR/CSRで統一する。
+
+```typescript
+// app/(auth)/products/[id]/page.tsx
+import { productsFetcher } from '@/features/products'
+
+export default async function ProductPage({ params }: { params: { id: string } }) {
+  // SSRでもfetcher経由でAPI Routeを呼び出す
+  const product = await productsFetcher.getById(params.id)
+  return <ProductDetail product={product} />
+}
+```
+
+## 参照
+
+- [データ取得戦略](../guides/fetch-strategy.md)
+- [アーキテクチャガイド](../guides/architecture.md)

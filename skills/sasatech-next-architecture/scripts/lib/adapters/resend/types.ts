@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 // 入力型
 // ========================================
 
-export interface SendEmailInput {
+interface _SendEmailInput {
   /** 宛先（単一または複数） */
   to: string | string[]
   /** 件名 */
@@ -25,18 +25,23 @@ export interface SendEmailInput {
   bcc?: string | string[]
 }
 
-export interface SendBatchEmailInput {
-  emails: SendEmailInput[]
+interface _SendBatchEmailInput {
+  emails: _SendEmailInput[]
 }
 
 // ========================================
 // 出力型
 // ========================================
 
-export interface EmailResult {
+interface _EmailResult {
   id: string
 }
 
-export interface BatchEmailResult {
+interface _BatchEmailResult {
   ids: string[]
 }
+
+export type SendEmailInput = _SendEmailInput
+export type SendBatchEmailInput = _SendBatchEmailInput
+export type EmailResult = _EmailResult
+export type BatchEmailResult = _BatchEmailResult

@@ -12,7 +12,7 @@ import type { Database } from '@/types/database'
  * const supabase = await createClient()
  * const { data } = await supabase.from('products').select('*')
  */
-export async function createClient() {
+async function _createClient() {
   const cookieStore = await cookies()
 
   return createServerClient<Database>(
@@ -42,7 +42,7 @@ export async function createClient() {
  *
  * 注意: 管理者操作やバッチ処理など、限定的な用途のみ使用
  */
-export async function createServiceClient() {
+async function _createServiceClient() {
   const cookieStore = await cookies()
 
   return createServerClient<Database>(
@@ -66,3 +66,6 @@ export async function createServiceClient() {
     }
   )
 }
+
+export const createClient = _createClient
+export const createServiceClient = _createServiceClient

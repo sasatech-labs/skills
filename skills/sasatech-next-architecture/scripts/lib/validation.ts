@@ -1,7 +1,7 @@
 import { ZodError, ZodSchema } from 'zod'
 import { badRequest } from './api-response'
 
-export type ValidationResult<T> =
+type _ValidationResult<T> =
   | { success: true; data: T }
   | { success: false; response: Response }
 
@@ -17,10 +17,10 @@ export type ValidationResult<T> =
  *   // validation.data は型安全
  * }
  */
-export async function validateBody<T>(
+async function _validateBody<T>(
   request: Request,
   schema: ZodSchema<T>
-): Promise<ValidationResult<T>> {
+): Promise<_ValidationResult<T>> {
   try {
     const body = await request.json()
     const data = schema.parse(body)
@@ -58,10 +58,10 @@ export async function validateBody<T>(
  *   }
  * }
  */
-export function validateParams<T>(
+function _validateParams<T>(
   params: unknown,
   schema: ZodSchema<T>
-): ValidationResult<T> {
+): _ValidationResult<T> {
   try {
     const data = schema.parse(params)
     return { success: true, data }
@@ -97,10 +97,10 @@ export function validateParams<T>(
  *   }
  * }
  */
-export function validateQuery<T>(
+function _validateQuery<T>(
   query: unknown,
   schema: ZodSchema<T>
-): ValidationResult<T> {
+): _ValidationResult<T> {
   try {
     const data = schema.parse(query)
     return { success: true, data }
@@ -121,3 +121,8 @@ export function validateQuery<T>(
     }
   }
 }
+
+export type ValidationResult<T> = _ValidationResult<T>
+export const validateBody = _validateBody
+export const validateParams = _validateParams
+export const validateQuery = _validateQuery

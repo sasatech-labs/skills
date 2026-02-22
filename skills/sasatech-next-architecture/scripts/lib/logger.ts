@@ -16,7 +16,7 @@ const logLevel = process.env.LOG_LEVEL ?? (isProduction ? 'info' : 'debug')
  * logger.error({ error }, 'Failed to process request')
  * ```
  */
-export const logger: Logger = pino({
+const _logger: Logger = pino({
   level: logLevel,
   // 機密情報をマスク
   redact: {
@@ -58,8 +58,8 @@ export const logger: Logger = pino({
  * log.info({ operation: 'createProduct' }, 'Creating product')
  * ```
  */
-export function createRequestLogger(requestId: string, userId?: string): Logger {
-  return logger.child({
+function _createRequestLogger(requestId: string, userId?: string): Logger {
+  return _logger.child({
     requestId,
     ...(userId && { userId }),
   })
@@ -68,7 +68,7 @@ export function createRequestLogger(requestId: string, userId?: string): Logger 
 /**
  * レイヤー別のログヘルパー
  */
-export const logLayers = {
+const _logLayers = {
   handler: (log: Logger, route: string, method: string) =>
     log.child({ layer: 'handler', route, method }),
 
@@ -81,3 +81,7 @@ export const logLayers = {
   adapter: (log: Logger, service: string, operation: string) =>
     log.child({ layer: 'adapter', service, operation }),
 }
+
+export const logger = _logger
+export const createRequestLogger = _createRequestLogger
+export const logLayers = _logLayers

@@ -8,15 +8,13 @@ import type {
   BatchEmailResult,
 } from './types'
 
-export type { SendEmailInput, SendBatchEmailInput, EmailResult, BatchEmailResult }
-
 /**
  * デフォルトの送信元アドレス
  * 本番環境では環境変数から取得することを推奨
  */
 const DEFAULT_FROM = process.env.EMAIL_FROM ?? 'noreply@example.com'
 
-export const resendAdapter = {
+const _resendAdapter = {
   /**
    * メールを送信
    */
@@ -84,3 +82,6 @@ export const resendAdapter = {
     return { ids: data!.data.map((d) => d.id) }
   },
 }
+
+export type { SendEmailInput, SendBatchEmailInput, EmailResult, BatchEmailResult }
+export const resendAdapter = _resendAdapter

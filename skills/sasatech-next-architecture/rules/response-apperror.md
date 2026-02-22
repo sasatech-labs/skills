@@ -54,7 +54,7 @@ async findById(supabase: SupabaseClient, id: string) {
     if (error.code === 'PGRST116') {
       throw AppError.notFound('Product not found')  // 404
     }
-    throw new AppError(error.message, 500)  // 500
+    throw new AppError(error.message, 500, 'INTERNAL_ERROR')  // 500
   }
   return data
 }
@@ -85,26 +85,25 @@ async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
 
 ## Handler でのエラーハンドリング
 
-```typescript
-export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const post = await publishPost(supabase, params.id, user.id)
-    return ok(post)
-  } catch (error) {
-    if (error instanceof AppError) {
-      // AppError はそのまま HTTP レスポンスに変換
-      return NextResponse.json(
-        { error: { message: error.message, code: error.code } },
-        { status: error.statusCode }
-      )
-    }
+`withHTTPError`が`AppError`のstatusCodeとcodeをHTTPレスポンス(error_codeキー)に自動変換するため、Handler関数内でtry-catchやAppError判定を記述する必要はない。
 
-    // 予期しないエラー
-    console.error('Unexpected error:', error)
-    return serverError()
-  }
-}
+```typescript
+// src/features/posts/core/handler.ts
+import 'server-only'
+
+import { createClient } from '@/lib/supabase/server'
+import { ok } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
+import { publishPost } from './service'
+
+// Service層がAppError(403)やAppError(400)をスローすると、
+// withHTTPErrorが自動的に対応するHTTPレスポンスに変換する
+export const handlePublishPost = withHTTPError(async (request, context) => {
+  const { id } = await context.params
+  const supabase = await createClient()
+  const post = await publishPost(supabase, id)
+  return ok(post)
+})
 ```
 
 ## AppError クラスの実装
@@ -115,7 +114,7 @@ export class AppError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
-    public code?: string
+    public code: string = 'INTERNAL_ERROR'
   ) {
     super(message)
     this.name = 'AppError'
@@ -154,3 +153,10 @@ export class AppError extends Error {
 | `NOT_FOUND` | 404 | リソースなし |
 | `ALREADY_EXISTS` | 409 | 重複 |
 | `INTERNAL_ERROR` | 500 | サーバーエラー |
+
+## 参照
+
+- [response-with-http-error](response-with-http-error.md) - withHTTPError必須ルール
+- [response-helpers](response-helpers.md) - レスポンスヘルパー使用ルール
+- [response-adapter-errors](response-adapter-errors.md) - Adapter層のエラー変換ルール
+- [error-handling.md](../guides/error-handling.md) - エラーハンドリングガイド

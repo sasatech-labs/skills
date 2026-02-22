@@ -19,7 +19,7 @@ type FetcherOptions = {
  *   body: { name: 'New Product', price: 100 }
  * })
  */
-export async function fetcher<T>(
+async function _fetcher<T>(
   url: string,
   options: FetcherOptions = {}
 ): Promise<T> {
@@ -39,16 +39,18 @@ export async function fetcher<T>(
     return undefined as T
   }
 
-  const data = await response.json()
+  const json = await response.json()
 
   if (!response.ok) {
     throw new ApiError(
-      data.error?.message || 'An error occurred',
+      json.error?.message || 'An error occurred',
       response.status,
-      data.error?.code,
-      data.error?.details
+      json.error?.error_code || 'UNKNOWN_ERROR',
+      json.error?.details
     )
   }
 
-  return data as T
+  return json.data as T
 }
+
+export const fetcher = _fetcher

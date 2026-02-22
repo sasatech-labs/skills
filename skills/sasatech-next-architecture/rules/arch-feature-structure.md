@@ -38,13 +38,13 @@ src/
 src/features/
 ├── products/
 │   ├── index.ts              # 公開APIを制御
-│   ├── core/
-│   │   ├── index.ts
-│   │   ├── schema.ts         # 製品のスキーマ
-│   │   ├── service.ts        # 製品のビジネスロジック
-│   │   └── repository.ts     # 製品のデータアクセス層
-│   ├── fetcher.ts            # 製品のフェッチャー
-│   └── hooks.ts              # 製品のフック
+│   └── core/
+│       ├── index.ts
+│       ├── schema.ts         # 製品のスキーマ
+│       ├── service.ts        # 製品のビジネスロジック
+│       ├── repository.ts     # 製品のデータアクセス層
+│       ├── fetcher.ts        # 製品のフェッチャー
+│       └── hooks.ts          # 製品のフック
 │
 └── users/
     ├── index.ts              # 公開APIを制御
@@ -98,16 +98,18 @@ src/features/products/
 │   ├── index.ts
 │   ├── schema.ts
 │   ├── service.ts
-│   └── repository.ts
+│   ├── repository.ts
+│   ├── fetcher.ts
+│   └── hooks.ts
 ├── reviews/          # レビュー機能
 │   ├── index.ts
 │   ├── schema.ts
 │   ├── service.ts
-│   └── repository.ts
-├── inventory/        # 在庫機能
-│   └── ...
-├── fetcher.ts        # 共通のフェッチャー
-└── hooks.ts          # 共通のフック
+│   ├── repository.ts
+│   ├── fetcher.ts
+│   └── hooks.ts
+└── inventory/        # 在庫機能
+    └── ...
 ```
 
 ```typescript
@@ -127,16 +129,17 @@ const productReviews = await reviews.getReviews(supabase, productId)
 
 ### 単一機能の場合
 
-サブ機能がない場合は`core/`を省略する。
+サブ機能がない場合でも`core/`ディレクトリを使用する。
 
 ```text
 src/features/auth/
 ├── index.ts
-├── schema.ts
-├── service.ts
-├── repository.ts
-├── fetcher.ts
-└── hooks.ts
+└── core/
+    ├── schema.ts
+    ├── service.ts
+    ├── repository.ts
+    ├── fetcher.ts
+    └── hooks.ts
 ```
 
 ### ディレクトリ命名

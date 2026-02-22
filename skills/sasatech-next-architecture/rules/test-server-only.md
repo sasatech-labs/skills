@@ -75,3 +75,7 @@ export default defineConfig({
 - `vitest.setup.ts`はすべてのテストファイルより前に実行される
 - 個別のテストファイルでモックする必要はない
 - CI環境でも同じセットアップが適用される
+
+## 参照
+
+- [server-only-directive](server-only-directive.md) - server-onlyディレクティブ必須ルール

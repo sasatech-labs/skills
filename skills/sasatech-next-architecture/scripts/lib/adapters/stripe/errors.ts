@@ -5,7 +5,7 @@ import { AppError } from '@/lib/errors'
 /**
  * Stripe エラーを AppError に変換
  */
-export function handleStripeError(error: unknown): AppError {
+function _handleStripeError(error: unknown): AppError {
   if (error instanceof Stripe.errors.StripeError) {
     switch (error.type) {
       case 'StripeCardError':
@@ -91,3 +91,5 @@ function getCardErrorMessage(code: string | undefined): string {
       return 'カードの処理に失敗しました'
   }
 }
+
+export const handleStripeError = _handleStripeError

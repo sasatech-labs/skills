@@ -102,3 +102,7 @@ This only works in Server Components.
 ```bash
 npm install server-only
 ```
+
+## 参照
+
+- [test-server-only](test-server-only.md) - テスト環境でのserver-onlyモック設定

@@ -16,9 +16,9 @@
 ## レイヤー構成
 
 ```
-Handler (handler.ts)   リクエスト/レスポンス、バリデーション、認証
+Handler (handler.ts)   リクエスト/レスポンス、バリデーション、楽観的認証
         ↓
-Service               ビジネスロジック、複数 Repository 連携
+Service               ビジネスロジック、厳密な認可、複数 Repository 連携
         ↓
 Repository            データアクセス
 Adapter               外部 API 連携（Stripe, Resend 等）
@@ -27,8 +27,8 @@ Adapter               外部 API 連携（Stripe, Resend 等）
 ### 各レイヤーの責務
 
 - **API Route**: 薄いエントリーポイント。Handler関数を呼び出すだけ
-- **Handler**: リクエスト/レスポンスの境界。入力検証と認証を担当
-- **Service**: ビジネスロジックの中核。複数のRepositoryやAdapterを組み合わせる
+- **Handler**: リクエスト/レスポンスの境界。入力検証と楽観的認証を担当
+- **Service**: ビジネスロジックの中核。厳密な認可と、複数のRepositoryやAdapterの組み合わせ
 - **Repository**: 内部データストア（Supabase）へのアクセスをカプセル化
 - **Adapter**: 外部サービス（決済、メール、AI等）への連携をカプセル化
 
@@ -94,6 +94,7 @@ features/products/
 // features/auth/index.ts
 export { handleSignIn, handleSignUp, handleSignOut } from './core/handler'
 export { signIn, signUp, signOut } from './core/service'
+export { authFetcher } from './core/fetcher'
 export type { User, AuthState } from './core/schema'
 ```
 
@@ -110,6 +111,7 @@ export * as inventory from './inventory'
 // features/products/core/index.ts
 export { handleGetProducts, handleCreateProduct } from './handler'
 export { getProducts, createProduct } from './service'
+export { productsFetcher } from './fetcher'
 export type { Product, CreateProductInput } from './schema'
 ```
 
@@ -117,7 +119,10 @@ export type { Product, CreateProductInput } from './schema'
 // 利用側（API Route）
 import { handleGetProducts } from '@/features/products'
 
-// 利用側（Service）
+// 利用側（SSR page.tsx / CSR fetcher）
+import { productsFetcher } from '@/features/products'
+
+// 利用側（他のFeatureのService）
 import { getProducts, Product } from '@/features/products'
 import { reviews } from '@/features/products'
 
@@ -193,3 +198,10 @@ features/auth/            features/users/
 2. **段階的に移行**: すべてのファイルを一度に分割せず、必要なレイヤーから順次分割する
 3. **命名規則の統一**: 分割後のファイル名は`[entity]-[layer].ts`形式で統一する
 4. **テストも同様に分割**: ファイルを分割したら、対応するテストファイルも分割する
+
+## 関連ルール
+
+- [arch-three-layers](../rules/arch-three-layers.md) - Handler → Service → Repository/Adapter の構成ルール
+- [arch-feature-structure](../rules/arch-feature-structure.md) - 機能単位のモジュール化ルール
+- [arch-public-api](../rules/arch-public-api.md) - Feature の公開APIルール
+- [arch-fetch-strategy](../rules/arch-fetch-strategy.md) - SSR/CSRデータ取得戦略ルール

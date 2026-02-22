@@ -1,49 +1,55 @@
 import { NextResponse } from 'next/server'
 
-type ErrorDetail = {
-  field: string
-  message: string
+type SuccessResponse<T> = {
+  data: T
 }
 
 type ErrorResponse = {
   error: {
+    error_code: string
     message: string
-    code?: string
-    details?: ErrorDetail[]
+  }
+}
+
+type ValidationErrorResponse = {
+  error: {
+    error_code: 'VALIDATION_ERROR'
+    message: string
+    details: Array<{ field: string; message: string }>
   }
 }
 
 /**
  * 成功レスポンス (200 OK)
  */
-export function ok<T>(data: T): NextResponse<T> {
-  return NextResponse.json(data)
+function _ok<T>(data: T): NextResponse<SuccessResponse<T>> {
+  return NextResponse.json({ data })
 }
 
 /**
  * 作成成功レスポンス (201 Created)
  */
-export function created<T>(data: T): NextResponse<T> {
-  return NextResponse.json(data, { status: 201 })
+function _created<T>(data: T): NextResponse<SuccessResponse<T>> {
+  return NextResponse.json({ data }, { status: 201 })
 }
 
 /**
  * コンテンツなしレスポンス (204 No Content)
  */
-export function noContent(): NextResponse {
+function _noContent(): NextResponse {
   return new NextResponse(null, { status: 204 })
 }
 
 /**
  * バッドリクエスト (400)
  */
-export function badRequest(
-  message: string,
-  code?: string,
-  details?: ErrorDetail[]
-): NextResponse<ErrorResponse> {
+function _badRequest(
+  message: string = 'Bad request',
+  errorCode: string = 'BAD_REQUEST',
+  details?: Array<{ field: string; message: string }>
+): NextResponse<ErrorResponse | ValidationErrorResponse> {
   return NextResponse.json(
-    { error: { message, code, details } },
+    { error: { error_code: errorCode, message, ...(details && { details }) } },
     { status: 400 }
   )
 }
@@ -51,11 +57,12 @@ export function badRequest(
 /**
  * 認証エラー (401)
  */
-export function unauthorized(
-  message: string = 'Unauthorized'
+function _unauthorized(
+  message: string = 'Unauthorized',
+  errorCode: string = 'UNAUTHORIZED'
 ): NextResponse<ErrorResponse> {
   return NextResponse.json(
-    { error: { message, code: 'UNAUTHORIZED' } },
+    { error: { error_code: errorCode, message } },
     { status: 401 }
   )
 }
@@ -63,11 +70,12 @@ export function unauthorized(
 /**
  * 権限エラー (403)
  */
-export function forbidden(
-  message: string = 'Forbidden'
+function _forbidden(
+  message: string = 'Forbidden',
+  errorCode: string = 'FORBIDDEN'
 ): NextResponse<ErrorResponse> {
   return NextResponse.json(
-    { error: { message, code: 'FORBIDDEN' } },
+    { error: { error_code: errorCode, message } },
     { status: 403 }
   )
 }
@@ -75,11 +83,12 @@ export function forbidden(
 /**
  * 未検出エラー (404)
  */
-export function notFound(
-  message: string = 'Not Found'
+function _notFound(
+  message: string = 'Not Found',
+  errorCode: string = 'NOT_FOUND'
 ): NextResponse<ErrorResponse> {
   return NextResponse.json(
-    { error: { message, code: 'NOT_FOUND' } },
+    { error: { error_code: errorCode, message } },
     { status: 404 }
   )
 }
@@ -87,11 +96,12 @@ export function notFound(
 /**
  * 競合エラー (409)
  */
-export function conflict(
-  message: string = 'Conflict'
+function _conflict(
+  message: string = 'Conflict',
+  errorCode: string = 'CONFLICT'
 ): NextResponse<ErrorResponse> {
   return NextResponse.json(
-    { error: { message, code: 'CONFLICT' } },
+    { error: { error_code: errorCode, message } },
     { status: 409 }
   )
 }
@@ -99,11 +109,23 @@ export function conflict(
 /**
  * サーバーエラー (500)
  */
-export function serverError(
-  message: string = 'Internal Server Error'
+function _serverError(
+  message: string = 'Internal Server Error',
+  errorCode: string = 'INTERNAL_ERROR'
 ): NextResponse<ErrorResponse> {
   return NextResponse.json(
-    { error: { message, code: 'INTERNAL_ERROR' } },
+    { error: { error_code: errorCode, message } },
     { status: 500 }
   )
 }
+
+export type { SuccessResponse, ErrorResponse, ValidationErrorResponse }
+export const ok = _ok
+export const created = _created
+export const noContent = _noContent
+export const badRequest = _badRequest
+export const unauthorized = _unauthorized
+export const forbidden = _forbidden
+export const notFound = _notFound
+export const conflict = _conflict
+export const serverError = _serverError

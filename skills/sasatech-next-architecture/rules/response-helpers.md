@@ -13,43 +13,59 @@ Handler 層では直接 `NextResponse.json()` を使わず、レスポンスヘ�
 ## NG例
 
 ```typescript
-export async function GET(request: NextRequest) {
+// src/features/products/core/handler.ts
+import 'server-only'
+
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { withHTTPError } from '@/lib/with-http-error'
+import { getProducts, createProduct } from './service'
+
+// NG: 直接 NextResponse を使用すると形式が不統一になる
+export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-
-  // NG: 直接 NextResponse を使用すると形式が不統一になる
   return NextResponse.json(products)
-}
+})
 
-export async function POST(request: NextRequest) {
+// NG: status の指定方法がハンドラごとに異なる可能性がある
+export const handleCreateProduct = withHTTPError(async (request) => {
   // ...
-  // NG: status の指定方法がハンドラごとに異なる可能性がある
   return NextResponse.json(product, { status: 201 })
-}
+})
 ```
 
 ## OK例
 
 ```typescript
-import { ok, created, notFound, serverError } from '@/lib/api-response'
+// src/features/products/core/handler.ts
+import 'server-only'
 
-export async function GET(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase)
-    // OK: レスポンスヘルパーを使用することで形式が統一される
-    return ok(products)
-  } catch (error) {
-    // OK: エラーレスポンスも統一された形式で返す
-    return serverError()
+import { createClient } from '@/lib/supabase/server'
+import { ok, created } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
+import { getProducts, createProduct } from './service'
+import { validateBody } from '@/lib/validation'
+import { createProductSchema } from './schema'
+
+// OK: レスポンスヘルパーを使用することで形式が統一される
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return ok(products)
+})
+
+// OK: 201 Created は created() ヘルパーで明示的に表現
+export const handleCreateProduct = withHTTPError(async (request) => {
+  const validation = await validateBody(request, createProductSchema)
+  if (!validation.success) {
+    return validation.response
   }
-}
 
-export async function POST(request: NextRequest) {
-  // ...
-  // OK: 201 Created は created() ヘルパーで明示的に表現
+  const supabase = await createClient()
+  const product = await createProduct(supabase, validation.data)
   return created(product)
-}
+})
 ```
 
 ## 理由
@@ -70,12 +86,12 @@ export async function POST(request: NextRequest) {
 | `ok(data)` | 200 | GET/PATCH 成功 |
 | `created(data)` | 201 | POST 成功 |
 | `noContent()` | 204 | DELETE 成功 |
-| `paginated(data, pagination)` | 200 | ページネーション付きリスト |
-| `badRequest(message, code?, details?)` | 400 | バリデーションエラー |
-| `unauthorized(message?)` | 401 | 未認証 |
-| `forbidden(message?)` | 403 | 権限不足 |
-| `notFound(message?)` | 404 | リソースなし |
-| `serverError(message?)` | 500 | サーバーエラー |
+| `badRequest(message?, errorCode?, details?)` | 400 | バリデーションエラー |
+| `unauthorized(message?, errorCode?)` | 401 | 未認証 |
+| `forbidden(message?, errorCode?)` | 403 | 権限不足 |
+| `notFound(message?, errorCode?)` | 404 | リソースなし |
+| `conflict(message?, errorCode?)` | 409 | 重複 |
+| `serverError(message?, errorCode?)` | 500 | サーバーエラー |
 
 ## レスポンス形式
 
@@ -83,43 +99,28 @@ export async function POST(request: NextRequest) {
 // 成功（単一リソース）
 { "data": { "id": "...", "name": "..." } }
 
-// 成功（リスト）
-{ "data": [...] }
+// 成功（ページネーション）
+{ "data": { "items": [...], "total": 100, "page": 1, "limit": 20 } }
 
-// 成功（ページネーション付き）
-{
-  "data": [...],
-  "pagination": { "page": 1, "limit": 20, "total": 100, "totalPages": 5 }
-}
+// 成功（204 No Content）— ボディなし
 
 // エラー
-{
-  "error": {
-    "message": "Not found",
-    "code": "NOT_FOUND"
-  }
-}
+{ "error": { "error_code": "NOT_FOUND", "message": "Not found" } }
 
-// バリデーションエラー
-{
-  "error": {
-    "message": "Validation failed",
-    "code": "VALIDATION_ERROR",
-    "details": [
-      { "field": "name", "message": "必須です" }
-    ]
-  }
-}
+// エラー（バリデーション）
+{ "error": { "error_code": "VALIDATION_ERROR", "message": "Validation failed", "details": [...] } }
 ```
 
 ## 実装例
 
 ```typescript
 // src/lib/api-response.ts
+import 'server-only'
+
 import { NextResponse } from 'next/server'
 
 export function ok<T>(data: T) {
-  return NextResponse.json({ data })
+  return NextResponse.json({ data }, { status: 200 })
 }
 
 export function created<T>(data: T) {
@@ -130,32 +131,70 @@ export function noContent() {
   return new NextResponse(null, { status: 204 })
 }
 
-export function paginated<T>(data: T[], pagination: Pagination) {
-  return NextResponse.json({ data, pagination })
-}
-
 export function badRequest(
-  message: string,
-  code?: string,
-  details?: ValidationError[]
+  message: string = 'Bad request',
+  errorCode: string = 'BAD_REQUEST',
+  details?: Array<{ field: string; message: string }>
 ) {
   return NextResponse.json(
-    { error: { message, code, details } },
+    { error: { error_code: errorCode, message, ...(details && { details }) } },
     { status: 400 }
   )
 }
 
-export function notFound(message = 'Not found') {
+export function unauthorized(
+  message: string = 'Unauthorized',
+  errorCode: string = 'UNAUTHORIZED'
+) {
   return NextResponse.json(
-    { error: { message, code: 'NOT_FOUND' } },
+    { error: { error_code: errorCode, message } },
+    { status: 401 }
+  )
+}
+
+export function forbidden(
+  message: string = 'Forbidden',
+  errorCode: string = 'FORBIDDEN'
+) {
+  return NextResponse.json(
+    { error: { error_code: errorCode, message } },
+    { status: 403 }
+  )
+}
+
+export function notFound(
+  message: string = 'Not found',
+  errorCode: string = 'NOT_FOUND'
+) {
+  return NextResponse.json(
+    { error: { error_code: errorCode, message } },
     { status: 404 }
   )
 }
 
-export function serverError(message = 'Internal server error') {
+export function conflict(
+  message: string = 'Conflict',
+  errorCode: string = 'CONFLICT'
+) {
   return NextResponse.json(
-    { error: { message, code: 'INTERNAL_ERROR' } },
+    { error: { error_code: errorCode, message } },
+    { status: 409 }
+  )
+}
+
+export function serverError(
+  message: string = 'Internal server error',
+  errorCode: string = 'INTERNAL_ERROR'
+) {
+  return NextResponse.json(
+    { error: { error_code: errorCode, message } },
     { status: 500 }
   )
 }
 ```
+
+## 参照
+
+- [response-with-http-error](response-with-http-error.md) - withHTTPError必須ルール
+- [response-apperror](response-apperror.md) - AppError使用ルール
+- [wrappers.md](../guides/wrappers.md) - ラッパーユーティリティガイド

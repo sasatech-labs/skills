@@ -2,14 +2,14 @@
 
 ## 概要
 
-Handler層は、`features/[feature]/core/handler.ts`で実装される、リクエスト/レスポンスの境界を担当するレイヤーである。API Routeから呼び出され、入力検証、認証チェック、エラーハンドリングを行い、ビジネスロジックはService層に委譲する。
+Handler層は、`features/[feature]/core/handler.ts`で実装される、リクエスト/レスポンスの境界を担当するレイヤーである。API Routeから呼び出され、入力検証、楽観的認証、エラーハンドリングを行い、ビジネスロジックはService層に委譲する。
 
-**対象範囲**: リクエスト処理、バリデーション、認証チェック、Service層との連携、レスポンス返却
+**対象範囲**: リクエスト処理、バリデーション、楽観的認証、Service層との連携、レスポンス返却
 
 **主要な責務**:
 - リクエスト受信とパース
 - 入力バリデーション
-- 認証・認可チェック
+- 楽観的認証（セッション存在チェック）
 - Service層の呼び出し
 - エラーハンドリングとレスポンス返却
 
@@ -24,7 +24,7 @@ Handler層は、`features/[feature]/core/handler.ts`で実装される、リク�
 アーキテクチャでは、API RouteとHandler層を明確に分離する：
 
 - **API Route** (`app/api/`): 薄いエントリーポイント。Handler関数を呼び出すだけ
-- **Handler層** (`features/*/core/handler.ts`): リクエスト/レスポンスの境界。入力検証と認証を担当
+- **Handler層** (`features/*/core/handler.ts`): リクエスト/レスポンスの境界。入力検証と楽観的認証を担当
 
 ```
 app/api/products/route.ts (API Route)
@@ -40,7 +40,7 @@ Handler層をアーキテクチャの最上位レイヤーとして配置する�
 
 ### アプリケーションの入口を守る
 
-Handler層は、外部からの不正なリクエストや攻撃を早期に排除する。入力検証と認証チェックを最初に行うことで、不正なデータや未認証のアクセスがアプリケーション内部に到達することを防ぐ。
+Handler層は、外部からの不正なリクエストや攻撃を早期に排除する。入力検証と楽観的認証チェックを最初に行うことで、不正なデータや未認証のアクセスがアプリケーション内部に到達することを防ぐ。
 
 ### 関心事の分離
 
@@ -79,7 +79,7 @@ export const DELETE = handleDeleteProduct
 
 ### Handler層の実装
 
-Handler層は`features/[feature]/core/handler.ts`で実装する。
+Handler層は`features/[feature]/core/handler.ts`で実装する。すべてのHandler関数は`withHTTPError`でラップし、エラーハンドリングを統一する。
 
 #### 基本的なGETハンドラー
 
@@ -87,20 +87,16 @@ Handler層は`features/[feature]/core/handler.ts`で実装する。
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, serverError } from '@/lib/api-response'
+import { ok } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
-export async function handleGetProducts(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase)
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return ok(products)
+})
 ```
 
 #### POSTハンドラー（バリデーション付き）
@@ -109,14 +105,14 @@ export async function handleGetProducts(request: NextRequest) {
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { created, serverError } from '@/lib/api-response'
+import { created } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
 import { createProduct } from './service'
 
-export async function handleCreateProduct(request: NextRequest) {
+export const handleCreateProduct = withHTTPError(async (request) => {
   // 1. バリデーション
   const validation = await validateBody(request, createProductSchema)
   if (!validation.success) {
@@ -124,14 +120,10 @@ export async function handleCreateProduct(request: NextRequest) {
   }
 
   // 2. ビジネスロジック実行
-  try {
-    const supabase = await createClient()
-    const product = await createProduct(supabase, validation.data)
-    return created(product)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const product = await createProduct(supabase, validation.data)
+  return created(product)
+})
 ```
 
 #### パラメータ付きハンドラー（GET/PATCH/DELETE）
@@ -140,61 +132,38 @@ export async function handleCreateProduct(request: NextRequest) {
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, noContent, notFound, serverError } from '@/lib/api-response'
+import { ok, noContent } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
 import { updateProductSchema } from './schema'
 import { getProduct, updateProduct, deleteProduct } from './service'
 
-export async function handleGetProduct(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await createClient()
-    const product = await getProduct(supabase, params.id)
+export const handleGetProduct = withHTTPError(async (request, context) => {
+  const { id } = await context.params
+  const supabase = await createClient()
+  const product = await getProduct(supabase, id)
+  return ok(product)
+})
 
-    if (!product) {
-      return notFound('Product not found')
-    }
-
-    return ok(product)
-  } catch (error) {
-    return serverError()
-  }
-}
-
-export async function handleUpdateProduct(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const handleUpdateProduct = withHTTPError(async (request, context) => {
+  const { id } = await context.params
   const validation = await validateBody(request, updateProductSchema)
   if (!validation.success) {
     return validation.response
   }
 
-  try {
-    const supabase = await createClient()
-    const product = await updateProduct(supabase, params.id, validation.data)
-    return ok(product)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const product = await updateProduct(supabase, id, validation.data)
+  return ok(product)
+})
 
-export async function handleDeleteProduct(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await createClient()
-    await deleteProduct(supabase, params.id)
-    return noContent()
-  } catch (error) {
-    return serverError()
-  }
-}
+export const handleDeleteProduct = withHTTPError(async (request, context) => {
+  const { id } = await context.params
+  const supabase = await createClient()
+  await deleteProduct(supabase, id)
+  return noContent()
+})
 ```
 
 ## バリデーション
@@ -231,40 +200,29 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok, badRequest, notFound, serverError } from '@/lib/api-response'
+import { ok, badRequest } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
 import { getProduct } from './service'
 
 const paramsSchema = z.object({
   id: z.string().uuid('Invalid product ID format'),
 })
 
-export async function handleGetProduct(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const handleGetProduct = withHTTPError(async (request, context) => {
+  const params = await context.params
+
   // パラメータを検証
   const result = paramsSchema.safeParse(params)
   if (!result.success) {
     return badRequest(result.error.format())
   }
 
-  try {
-    const supabase = await createClient()
-    const product = await getProduct(supabase, result.data.id)
-
-    if (!product) {
-      return notFound('Product not found')
-    }
-
-    return ok(product)
-  } catch (error) {
-    console.error('Failed to fetch product:', error)
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const product = await getProduct(supabase, result.data.id)
+  return ok(product)
+})
 ```
 
 ### 複雑なバリデーション例
@@ -310,28 +268,24 @@ export const createOrderSchema = z.object({
 // src/features/orders/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { created } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
 import { createOrderSchema } from './schema'
 import { createOrder } from './service'
 
-export async function handleCreateOrder(request: NextRequest) {
+export const handleCreateOrder = withHTTPError(async (request) => {
   const validation = await validateBody(request, createOrderSchema)
   if (!validation.success) {
     return validation.response
   }
 
   // バリデーション済みのデータを使用
-  try {
-    const supabase = await createClient()
-    const order = await createOrder(supabase, validation.data)
-    return created(order)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const order = await createOrder(supabase, validation.data)
+  return created(order)
+})
 ```
 
 ### バリデーションヘルパーの実装
@@ -358,10 +312,10 @@ export async function validateBody<T>(
     return { success: true, data }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const messages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+      const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return {
         success: false,
-        response: badRequest(messages.join(', '))
+        response: badRequest(message)
       }
     }
     return {
@@ -381,10 +335,10 @@ export function validateSearchParams<T>(
     return { success: true, data }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const messages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+      const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return {
         success: false,
-        response: badRequest(messages.join(', '))
+        response: badRequest(message)
       }
     }
     return {
@@ -401,11 +355,11 @@ export function validateSearchParams<T>(
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok, serverError } from '@/lib/api-response'
+import { ok } from '@/lib/api-response'
 import { validateSearchParams } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
 const querySchema = z.object({
@@ -414,26 +368,24 @@ const querySchema = z.object({
   categoryId: z.string().uuid().optional(),
 })
 
-export async function handleGetProducts(request: NextRequest) {
+export const handleGetProducts = withHTTPError(async (request) => {
   // クエリパラメータのバリデーション
   const validation = validateSearchParams(request, querySchema)
   if (!validation.success) {
     return validation.response
   }
 
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase, validation.data)
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const products = await getProducts(supabase, validation.data)
+  return ok(products)
+})
 ```
 
-## 認証チェック
+## 楽観的認証チェック
 
-認証・認可はHandler層の重要な責務である。リクエストの早い段階で認証状態を確認し、不正なアクセスを防ぐ。
+Handler層は楽観的認証を担当する。`supabase.auth.getSession()`でセッションの存在を確認し、未認証リクエストを早期に排除する。ロールや所有権などの認可判断はService層で行う。
+
+詳細は[認証・認可ガイド](../authentication.md)を参照。
 
 ### 基本的な認証チェック
 
@@ -441,241 +393,89 @@ export async function handleGetProducts(request: NextRequest) {
 // src/features/users/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, unauthorized, serverError } from '@/lib/api-response'
-import { validateBody } from '@/lib/validation'
-import { updateProfileSchema } from './schema'
-import { getProfile, updateProfile } from './service'
+import { ok } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
+import { AppError } from '@/lib/errors'
+import { getMyProfile } from './service'
 
-export async function handleGetProfile(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-
-    // 認証チェック
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return unauthorized('Authentication required')
-    }
-
-    const profile = await getProfile(supabase, user.id)
-    return ok(profile)
-  } catch (error) {
-    return serverError()
-  }
-}
-
-export async function handleUpdateProfile(request: NextRequest) {
-  const validation = await validateBody(request, updateProfileSchema)
-  if (!validation.success) {
-    return validation.response
-  }
-
-  try {
-    const supabase = await createClient()
-
-    // 認証チェック
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return unauthorized('Authentication required')
-    }
-
-    const profile = await updateProfile(supabase, user.id, validation.data)
-    return ok(profile)
-  } catch (error) {
-    return serverError()
-  }
-}
-```
-
-```typescript
-// src/app/api/profile/route.ts
-import { handleGetProfile, handleUpdateProfile } from '@/features/users'
-
-export const GET = handleGetProfile
-export const PATCH = handleUpdateProfile
-```
-
-### ロール/権限ベースの認可
-
-```typescript
-// src/features/products/core/handler.ts
-import 'server-only'
-
-import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { noContent, unauthorized, forbidden, serverError } from '@/lib/api-response'
-import { deleteProduct } from './service'
-
-export async function handleDeleteProduct(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const handleGetMyProfile = withHTTPError(async (request) => {
   const supabase = await createClient()
 
-  // 認証確認
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) {
-    return unauthorized('Authentication required')
+  // 楽観的認証: セッション存在チェック
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw AppError.unauthorized()
   }
 
-  // ユーザーのロールを取得
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  // 権限確認
-  if (profile?.role !== 'admin') {
-    return forbidden('Admin access required')
-  }
-
-  try {
-    await deleteProduct(supabase, params.id)
-    return noContent()
-  } catch (error) {
-    console.error('Failed to delete product:', error)
-    return serverError()
-  }
-}
+  // Service層に認証済みユーザーIDを渡す
+  const profile = await getMyProfile(supabase, session.user.id)
+  return ok(profile)
+})
 ```
 
-### リソースの所有権チェック
+### バリデーション + 認証
 
 ```typescript
 // src/features/posts/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, unauthorized, forbidden, notFound, serverError } from '@/lib/api-response'
+import { ok } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
+import { AppError } from '@/lib/errors'
 import { updatePostSchema } from './schema'
-import { getPost, updatePost } from './service'
+import { updatePost } from './service'
 
-export async function handleUpdatePost(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const handleUpdatePost = withHTTPError(async (request, context) => {
+  const { id } = await context.params
   const validation = await validateBody(request, updatePostSchema)
   if (!validation.success) {
     return validation.response
   }
 
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    // 認証チェック
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return unauthorized('Authentication required')
-    }
-
-    // リソースの存在確認
-    const post = await getPost(supabase, params.id)
-    if (!post) {
-      return notFound('Post not found')
-    }
-
-    // 所有権チェック
-    if (post.userId !== user.id) {
-      return forbidden('You do not have permission to update this post')
-    }
-
-    const updatedPost = await updatePost(supabase, params.id, validation.data)
-    return ok(updatedPost)
-  } catch (error) {
-    return serverError()
+  // 楽観的認証
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw AppError.unauthorized()
   }
-}
+
+  // Service層に認証済みユーザーIDを渡す（所有権チェックはService層で行う）
+  const post = await updatePost(supabase, session.user.id, id, validation.data)
+  return ok(post)
+})
 ```
 
-```typescript
-// src/app/api/posts/[id]/route.ts
-import { handleUpdatePost } from '@/features/posts'
+### 認可はService層で行う
 
-export const PATCH = handleUpdatePost
-```
-
-### 認証ヘルパーの実装
+ロール/権限ベースの認可や所有権チェックはService層の責務である。Handler層はセッション存在チェックのみを行い、認証済みユーザーIDをService層に渡す。
 
 ```typescript
-// src/lib/auth/helpers.ts
+// src/features/admin/core/handler.ts
 import 'server-only'
 
-import type { SupabaseClient } from '@supabase/supabase-js'
-
-export async function requireAuth(supabase: SupabaseClient) {
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    throw new Error('Authentication required')
-  }
-
-  return user
-}
-
-export async function requireAdmin(supabase: SupabaseClient) {
-  const user = await requireAuth(supabase)
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    throw new Error('Admin access required')
-  }
-
-  return { user, profile }
-}
-
-export async function requireOwnership(
-  supabase: SupabaseClient,
-  resourceUserId: string
-) {
-  const user = await requireAuth(supabase)
-
-  if (user.id !== resourceUserId) {
-    throw new Error('You can only access your own resources')
-  }
-
-  return user
-}
-```
-
-```typescript
-// src/features/users/core/handler.ts
-import 'server-only'
-
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireAuth } from '@/lib/auth/helpers'
-import { ok, unauthorized, serverError } from '@/lib/api-response'
-import { getProfile } from './service'
+import { ok } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
+import { AppError } from '@/lib/errors'
+import { getAdminDashboard } from './service'
 
-export async function handleGetProfile(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-    const profile = await getProfile(supabase, user.id)
-    return ok(profile)
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Authentication required') {
-      return unauthorized(error.message)
-    }
-    return serverError()
+// Handler層: セッション確認のみ
+// ロールチェックはService層（getAdminDashboard内）で行う
+export const handleGetAdminDashboard = withHTTPError(async (request) => {
+  const supabase = await createClient()
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw AppError.unauthorized()
   }
-}
-```
 
-```typescript
-// src/app/api/profile/route.ts
-import { handleGetProfile } from '@/features/users'
-
-export const GET = handleGetProfile
+  const dashboard = await getAdminDashboard(supabase, session.user.id)
+  return ok(dashboard)
+})
 ```
 
 ## エラーハンドリング
@@ -691,258 +491,137 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 
 export function ok<T>(data: T) {
-  return NextResponse.json(data, { status: 200 })
+  return NextResponse.json({ data }, { status: 200 })
 }
 
 export function created<T>(data: T) {
-  return NextResponse.json(data, { status: 201 })
+  return NextResponse.json({ data }, { status: 201 })
 }
 
 export function noContent() {
   return new NextResponse(null, { status: 204 })
 }
 
-export function badRequest(message: string = 'Bad request') {
+export function badRequest(
+  message: string = 'Bad request',
+  errorCode: string = 'BAD_REQUEST',
+  details?: Array<{ field: string; message: string }>
+) {
   return NextResponse.json(
-    { error: message },
+    { error: { error_code: errorCode, message, ...(details && { details }) } },
     { status: 400 }
   )
 }
 
-export function unauthorized(message: string = 'Unauthorized') {
+export function unauthorized(
+  message: string = 'Unauthorized',
+  errorCode: string = 'UNAUTHORIZED'
+) {
   return NextResponse.json(
-    { error: message },
+    { error: { error_code: errorCode, message } },
     { status: 401 }
   )
 }
 
-export function forbidden(message: string = 'Forbidden') {
+export function forbidden(
+  message: string = 'Forbidden',
+  errorCode: string = 'FORBIDDEN'
+) {
   return NextResponse.json(
-    { error: message },
+    { error: { error_code: errorCode, message } },
     { status: 403 }
   )
 }
 
-export function notFound(message: string = 'Not found') {
+export function notFound(
+  message: string = 'Not found',
+  errorCode: string = 'NOT_FOUND'
+) {
   return NextResponse.json(
-    { error: message },
+    { error: { error_code: errorCode, message } },
     { status: 404 }
   )
 }
 
-export function conflict(message: string = 'Conflict') {
+export function conflict(
+  message: string = 'Conflict',
+  errorCode: string = 'CONFLICT'
+) {
   return NextResponse.json(
-    { error: message },
+    { error: { error_code: errorCode, message } },
     { status: 409 }
   )
 }
 
-export function serverError(message: string = 'Internal server error') {
+export function serverError(
+  message: string = 'Internal server error',
+  errorCode: string = 'INTERNAL_ERROR'
+) {
   return NextResponse.json(
-    { error: message },
+    { error: { error_code: errorCode, message } },
     { status: 500 }
   )
 }
 ```
 
-### AppErrorの活用
+### withHTTPErrorによるエラーハンドリング統一
+
+`withHTTPError`がAppErrorのstatusCodeとcodeをHTTPレスポンスに自動変換する。Handler関数内でtry-catchやAppError判定を記述する必要がない。
 
 ```typescript
-// src/lib/errors.ts
-export class AppError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number = 500,
-    public code?: string
-  ) {
-    super(message)
-    this.name = 'AppError'
-  }
-}
-```
-
-```typescript
-// src/features/products/core/handler.ts
+// src/lib/with-http-error.ts
 import 'server-only'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { AppError } from '@/lib/errors'
-import { created } from '@/lib/api-response'
-import { validateBody } from '@/lib/validation'
-import { createProductSchema } from './schema'
-import { createProduct } from './service'
+import { serverError } from '@/lib/api-response'
 
-export async function handleCreateProduct(request: NextRequest) {
-  const validation = await validateBody(request, createProductSchema)
-  if (!validation.success) {
-    return validation.response
-  }
+type RouteContext = { params: Promise<Record<string, string>> }
+type HandlerFn = (
+  request: NextRequest,
+  context: RouteContext
+) => Promise<NextResponse>
 
-  try {
-    const supabase = await createClient()
-    const product = await createProduct(supabase, validation.data)
-    return created(product)
-  } catch (error) {
-    // AppErrorの場合は適切なステータスコードを返す
-    if (error instanceof AppError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.statusCode }
-      )
-    }
-
-    // 予期しないエラー
-    console.error('Unexpected error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-```
-
-```typescript
-// src/app/api/products/route.ts
-import { handleCreateProduct } from '@/features/products'
-
-export const POST = handleCreateProduct
-```
-
-### エラーハンドリングの統一化
-
-```typescript
-// src/lib/api-response/error-handler.ts
-import 'server-only'
-
-import { AppError } from '@/lib/errors'
-import {
-  badRequest,
-  unauthorized,
-  forbidden,
-  notFound,
-  conflict,
-  serverError
-} from './index'
-
-export function handleApiError(error: unknown) {
-  console.error('API Error:', error)
-
-  if (error instanceof AppError) {
-    const statusCode = error.statusCode
-    const message = error.message
-
-    if (statusCode === 400) return badRequest(message)
-    if (statusCode === 401) return unauthorized(message)
-    if (statusCode === 403) return forbidden(message)
-    if (statusCode === 404) return notFound(message)
-    if (statusCode === 409) return conflict(message)
-
-    return serverError(message)
-  }
-
-  // 未知のエラー
-  return serverError('An unexpected error occurred')
-}
-```
-
-```typescript
-// src/features/products/core/handler.ts
-import 'server-only'
-
-import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
-import { validateBody } from '@/lib/validation'
-import { handleApiError } from '@/lib/api-response/error-handler'
-import { createProductSchema } from './schema'
-import { createProduct } from './service'
-
-export async function handleCreateProduct(request: NextRequest) {
-  const validation = await validateBody(request, createProductSchema)
-  if (!validation.success) {
-    return validation.response
-  }
-
-  try {
-    const supabase = await createClient()
-    const product = await createProduct(supabase, validation.data)
-    return created(product)
-  } catch (error) {
-    return handleApiError(error)
-  }
-}
-```
-
-```typescript
-// src/app/api/products/route.ts
-import { handleCreateProduct } from '@/features/products'
-
-export const POST = handleCreateProduct
-```
-
-### 詳細なエラー処理
-
-```typescript
-// src/features/products/core/handler.ts
-import 'server-only'
-
-import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { requireAuth } from '@/lib/auth/helpers'
-import { AppError } from '@/lib/errors'
-import {
-  created,
-  badRequest,
-  unauthorized,
-  forbidden,
-  notFound,
-  conflict,
-  serverError
-} from '@/lib/api-response'
-import { validateBody } from '@/lib/validation'
-import { createProductSchema } from './schema'
-import { createProduct } from './service'
-
-export async function handleCreateProduct(request: NextRequest) {
-  const validation = await validateBody(request, createProductSchema)
-  if (!validation.success) {
-    return validation.response
-  }
-
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-
-    const product = await createProduct(supabase, {
-      ...validation.data,
-      userId: user.id,
-    })
-
-    return created(product)
-  } catch (error) {
-    console.error('Failed to create product:', error)
-
-    if (error instanceof AppError) {
-      switch (error.statusCode) {
-        case 400:
-          return badRequest(error.message)
-        case 401:
-          return unauthorized(error.message)
-        case 403:
-          return forbidden(error.message)
-        case 404:
-          return notFound(error.message)
-        case 409:
-          return conflict(error.message)
-        default:
-          return serverError(error.message)
+export function withHTTPError(handler: HandlerFn): HandlerFn {
+  return async (request, context) => {
+    try {
+      return await handler(request, context)
+    } catch (error) {
+      if (error instanceof AppError) {
+        return NextResponse.json(
+          { error: { error_code: error.code, message: error.message } },
+          { status: error.statusCode }
+        )
       }
+      return serverError()
     }
-
-    return serverError('An unexpected error occurred')
   }
 }
+```
+
+Handler関数はwithHTTPErrorでラップし、正常系のみを記述する。
+
+```typescript
+// src/features/products/core/handler.ts
+import 'server-only'
+
+import { createClient } from '@/lib/supabase/server'
+import { created } from '@/lib/api-response'
+import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
+import { createProductSchema } from './schema'
+import { createProduct } from './service'
+
+export const handleCreateProduct = withHTTPError(async (request) => {
+  const validation = await validateBody(request, createProductSchema)
+  if (!validation.success) {
+    return validation.response
+  }
+
+  const supabase = await createClient()
+  const product = await createProduct(supabase, validation.data)
+  return created(product)
+})
 ```
 
 ```typescript
@@ -951,6 +630,8 @@ import { handleCreateProduct } from '@/features/products'
 
 export const POST = handleCreateProduct
 ```
+
+Service層がスローする`AppError(400)`, `AppError(401)`, `AppError(404)`等はすべてwithHTTPErrorが自動的に対応するHTTPレスポンスに変換する。予期しないエラーは500 Internal Server Errorとなる。
 
 ## ネストしたルートの例
 
@@ -962,56 +643,36 @@ Next.jsのファイルベースルーティングを活用して、RESTful API�
 // src/features/products/reviews/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireAuth } from '@/lib/auth/helpers'
-import { ok, created, unauthorized } from '@/lib/api-response'
+import { ok, created } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
-import { handleApiError } from '@/lib/api-response/error-handler'
+import { withHTTPError } from '@/lib/with-http-error'
 import { createReviewSchema } from './schema'
 import { getReviews, createReview } from './service'
 
 // GET /api/products/[id]/reviews - レビュー一覧
-export async function handleGetReviews(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await createClient()
-    const reviews = await getReviews(supabase, params.id)
-    return ok(reviews)
-  } catch (error) {
-    return handleApiError(error)
-  }
-}
+export const handleGetReviews = withHTTPError(async (request, context) => {
+  const { id } = await context.params
+  const supabase = await createClient()
+  const reviews = await getReviews(supabase, id)
+  return ok(reviews)
+})
 
 // POST /api/products/[id]/reviews - レビュー作成
-export async function handleCreateReview(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const handleCreateReview = withHTTPError(async (request, context) => {
+  const { id } = await context.params
   const validation = await validateBody(request, createReviewSchema)
   if (!validation.success) {
     return validation.response
   }
 
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-
-    const review = await createReview(supabase, {
-      productId: params.id,
-      userId: user.id,
-      ...validation.data,
-    })
-    return created(review)
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Authentication required') {
-      return unauthorized(error.message)
-    }
-    return handleApiError(error)
-  }
-}
+  const supabase = await createClient()
+  const review = await createReview(supabase, {
+    productId: id,
+    ...validation.data,
+  })
+  return created(review)
+})
 ```
 
 ```typescript
@@ -1028,107 +689,42 @@ export const POST = handleCreateReview
 // src/features/products/reviews/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireAuth } from '@/lib/auth/helpers'
-import { ok, noContent, unauthorized, forbidden, notFound } from '@/lib/api-response'
+import { ok, noContent } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
-import { handleApiError } from '@/lib/api-response/error-handler'
+import { withHTTPError } from '@/lib/with-http-error'
 import { updateReviewSchema } from './schema'
 import { getReview, updateReview, deleteReview } from './service'
 
-type RouteParams = {
-  params: {
-    id: string          // productId
-    reviewId: string
-  }
-}
-
 // GET /api/products/[id]/reviews/[reviewId]
-export async function handleGetReview(
-  request: NextRequest,
-  { params }: RouteParams
-) {
-  try {
-    const supabase = await createClient()
-    const review = await getReview(supabase, params.reviewId)
-
-    if (!review) {
-      return notFound('Review not found')
-    }
-
-    return ok(review)
-  } catch (error) {
-    return handleApiError(error)
-  }
-}
+export const handleGetReview = withHTTPError(async (request, context) => {
+  const { reviewId } = await context.params
+  const supabase = await createClient()
+  const review = await getReview(supabase, reviewId)
+  return ok(review)
+})
 
 // PATCH /api/products/[id]/reviews/[reviewId]
-export async function handleUpdateReview(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+// 認証・所有権チェックはService層で行う
+export const handleUpdateReview = withHTTPError(async (request, context) => {
+  const { reviewId } = await context.params
   const validation = await validateBody(request, updateReviewSchema)
   if (!validation.success) {
     return validation.response
   }
 
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-
-    // 所有権確認
-    const review = await getReview(supabase, params.reviewId)
-    if (!review) {
-      return notFound('Review not found')
-    }
-
-    if (review.userId !== user.id) {
-      return forbidden('You can only edit your own reviews')
-    }
-
-    const updated = await updateReview(
-      supabase,
-      params.reviewId,
-      validation.data
-    )
-
-    return ok(updated)
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Authentication required') {
-      return unauthorized(error.message)
-    }
-    return handleApiError(error)
-  }
-}
+  const supabase = await createClient()
+  const updated = await updateReview(supabase, reviewId, validation.data)
+  return ok(updated)
+})
 
 // DELETE /api/products/[id]/reviews/[reviewId]
-export async function handleDeleteReview(
-  request: NextRequest,
-  { params }: RouteParams
-) {
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-
-    const review = await getReview(supabase, params.reviewId)
-    if (!review) {
-      return notFound('Review not found')
-    }
-
-    if (review.userId !== user.id) {
-      return forbidden('You can only delete your own reviews')
-    }
-
-    await deleteReview(supabase, params.reviewId)
-    return noContent()
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Authentication required') {
-      return unauthorized(error.message)
-    }
-    return handleApiError(error)
-  }
-}
+export const handleDeleteReview = withHTTPError(async (request, context) => {
+  const { reviewId } = await context.params
+  const supabase = await createClient()
+  await deleteReview(supabase, reviewId)
+  return noContent()
+})
 ```
 
 ```typescript
@@ -1150,71 +746,37 @@ export const DELETE = handleDeleteReview
 // src/features/orders/items/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, created, forbidden } from '@/lib/api-response'
+import { ok, created } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
-import { requireAuth } from '@/lib/auth/helpers'
-import { handleApiError } from '@/lib/api-response/error-handler'
+import { withHTTPError } from '@/lib/with-http-error'
 import { addOrderItemSchema } from './schema'
 import { getOrderItems, addOrderItem } from './service'
 
-type RouteParams = {
-  params: {
-    userId: string
-    orderId: string
-  }
-}
-
 // GET /api/users/[userId]/orders/[orderId]/items
-export async function handleGetOrderItems(
-  request: NextRequest,
-  { params }: RouteParams
-) {
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-
-    // ユーザーが自分の注文のみアクセス可能
-    if (user.id !== params.userId) {
-      return forbidden('You can only access your own orders')
-    }
-
-    const items = await getOrderItems(supabase, params.orderId)
-    return ok(items)
-  } catch (error) {
-    return handleApiError(error)
-  }
-}
+// 認証・所有権チェックはService層で行う
+export const handleGetOrderItems = withHTTPError(async (request, context) => {
+  const { userId, orderId } = await context.params
+  const supabase = await createClient()
+  const items = await getOrderItems(supabase, userId, orderId)
+  return ok(items)
+})
 
 // POST /api/users/[userId]/orders/[orderId]/items
-export async function handleAddOrderItem(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export const handleAddOrderItem = withHTTPError(async (request, context) => {
+  const { userId, orderId } = await context.params
   const validation = await validateBody(request, addOrderItemSchema)
   if (!validation.success) {
     return validation.response
   }
 
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-
-    if (user.id !== params.userId) {
-      return forbidden('You can only modify your own orders')
-    }
-
-    const item = await addOrderItem(supabase, {
-      ...validation.data,
-      orderId: params.orderId,
-    })
-
-    return created(item)
-  } catch (error) {
-    return handleApiError(error)
-  }
-}
+  const supabase = await createClient()
+  const item = await addOrderItem(supabase, userId, {
+    ...validation.data,
+    orderId,
+  })
+  return created(item)
+})
 ```
 
 ```typescript
@@ -1244,15 +806,19 @@ import { NextRequest } from 'next/server'
 ```typescript
 // 成功レスポンス
 {
-  "id": "123",
-  "name": "Product Name",
-  "price": 1000
+  "data": {
+    "id": "123",
+    "name": "Product Name",
+    "price": 1000
+  }
 }
 
 // エラーレスポンス
 {
-  "error": "Error message",
-  "code": "ERROR_CODE"  // オプション
+  "error": {
+    "error_code": "ERROR_CODE",
+    "message": "Error message"
+  }
 }
 ```
 
@@ -1262,28 +828,18 @@ import { NextRequest } from 'next/server'
 
 ```typescript
 // src/features/[feature]/core/handler.ts
-export async function handleCreateResource(request: NextRequest) {
+export const handleCreateResource = withHTTPError(async (request) => {
   // 1. バリデーション失敗 → 早期リターン
   const validation = await validateBody(request, schema)
   if (!validation.success) {
     return validation.response
   }
 
-  // 2. 認証チェック → 失敗時は早期リターン
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-
-    // 3. 正常系の処理
-    const result = await createResource(supabase, validation.data)
-    return created(result)
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Authentication required') {
-      return unauthorized(error.message)
-    }
-    return handleError(error)
-  }
-}
+  // 2. 正常系の処理(認証・ビジネスロジックはService層)
+  const supabase = await createClient()
+  const result = await createResource(supabase, validation.data)
+  return created(result)
+})
 ```
 
 ### 4. 適切なHTTPメソッドとステータスコード
@@ -1298,21 +854,30 @@ export async function handleCreateResource(request: NextRequest) {
 
 ### 5. 認証が必要なハンドラーの明示
 
+認証が必要なHandlerでは、`getSession()`で楽観的認証を行い、認証済みユーザーIDをService層に渡す。
+
 ```typescript
 // src/features/[feature]/core/handler.ts
 
-// 認証不要
-export async function handleGetPublicData(request: NextRequest) {
+// 認証不要: getSessionチェックなし
+export const handleGetPublicData = withHTTPError(async (request) => {
   const supabase = await createClient()
-  // 公開データの取得
-}
+  const data = await getPublicData(supabase)
+  return ok(data)
+})
 
-// 認証必須
-export async function handleCreatePrivateData(request: NextRequest) {
+// 認証必須: getSessionでセッション存在を確認
+export const handleCreatePrivateData = withHTTPError(async (request) => {
   const supabase = await createClient()
-  const user = await requireAuth(supabase)
-  // ユーザー固有の処理
-}
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw AppError.unauthorized()
+  }
+
+  const data = await createPrivateData(supabase, session.user.id)
+  return created(data)
+})
 ```
 
 ### 6. バリデーションは可能な限り厳格に
@@ -1332,30 +897,7 @@ const createUserSchema = z.object({
 
 ### 7. エラーログの適切な出力
 
-```typescript
-// src/features/[feature]/core/handler.ts
-export async function handleProcessData(request: NextRequest) {
-  try {
-    const result = await processData()
-    return ok(result)
-  } catch (error) {
-    // 開発環境では詳細ログ
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Error details:', {
-        error,
-        stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString(),
-      })
-    } else {
-      // 本番環境ではログサービスに送信
-      // await logService.error(error)
-      console.error('Error:', error instanceof Error ? error.message : 'Unknown error')
-    }
-
-    return handleError(error)
-  }
-}
-```
+withHTTPErrorがエラーをキャッチするため、個別のHandler関数でエラーログを出力する必要はない。ログ出力が必要な場合はService層で行う。
 
 ### 8. リクエストのタイムアウト対策
 
@@ -1375,18 +917,14 @@ export async function withTimeout<T>(
 
 ```typescript
 // src/features/products/core/handler.ts
-export async function handleGetProducts(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await withTimeout(
-      getProducts(supabase),
-      5000  // 5秒でタイムアウト
-    )
-    return ok(products)
-  } catch (error) {
-    return handleError(error)
-  }
-}
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await withTimeout(
+    getProducts(supabase),
+    5000  // 5秒でタイムアウト
+  )
+  return ok(products)
+})
 ```
 
 ### 9. CORS設定（必要な場合）
@@ -1436,44 +974,36 @@ Handler層はテストしやすいように薄く保つ。ビジネスロジッ�
 ```typescript
 // ✅ 良い例
 // src/features/products/core/handler.ts
-export async function handleCreateProduct(request: NextRequest) {
+export const handleCreateProduct = withHTTPError(async (request) => {
   const validation = await validateBody(request, schema)
   if (!validation.success) return validation.response
 
-  try {
-    const supabase = await createClient()
-    const result = await createProduct(supabase, validation.data)  // Service層
-    return created(result)
-  } catch (error) {
-    return handleError(error)
-  }
-}
+  const supabase = await createClient()
+  const result = await createProduct(supabase, validation.data)  // Service層
+  return created(result)
+})
 
 // ❌ 悪い例（Handler層にビジネスロジックが含まれている）
-export async function handleCreateProduct(request: NextRequest) {
+export const handleCreateProduct = withHTTPError(async (request) => {
   const validation = await validateBody(request, schema)
   if (!validation.success) return validation.response
 
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    // ビジネスロジックをHandler層に書いてはいけない
-    if (!validation.data.name?.trim()) {
-      throw new Error('Name is required')
-    }
-
-    const { data, error } = await supabase
-      .from('products')
-      .insert({ ...validation.data })
-      .select()
-      .single()
-
-    if (error) throw error
-    return created(data)
-  } catch (error) {
-    return handleError(error)
+  // ビジネスロジックをHandler層に書いてはいけない
+  if (!validation.data.name?.trim()) {
+    throw new Error('Name is required')
   }
-}
+
+  const { data, error } = await supabase
+    .from('products')
+    .insert({ ...validation.data })
+    .select()
+    .single()
+
+  if (error) throw error
+  return created(data)
+})
 ```
 
 ## 使用例
@@ -1486,20 +1016,16 @@ Handler層の実装例を以下に示す。
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, serverError } from '@/lib/api-response'
+import { ok } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
-export async function handleGetProducts(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase)
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return ok(products)
+})
 ```
 
 ```typescript
@@ -1522,14 +1048,14 @@ export const GET = handleGetProducts
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { created, serverError } from '@/lib/api-response'
+import { created } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
 import { createProduct } from './service'
 
-export async function handleCreateProduct(request: NextRequest) {
+export const handleCreateProduct = withHTTPError(async (request) => {
   // 1. バリデーション
   const validation = await validateBody(request, createProductSchema)
   if (!validation.success) {
@@ -1537,14 +1063,10 @@ export async function handleCreateProduct(request: NextRequest) {
   }
 
   // 2. ビジネスロジック実行
-  try {
-    const supabase = await createClient()
-    const product = await createProduct(supabase, validation.data)
-    return created(product)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const product = await createProduct(supabase, validation.data)
+  return created(product)
+})
 ```
 
 ```typescript
@@ -1565,40 +1087,37 @@ export const POST = handleCreateProduct
 // src/features/users/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ok, unauthorized, serverError } from '@/lib/api-response'
-import { getProfile } from './service'
+import { ok } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
+import { AppError } from '@/lib/errors'
+import { getMyProfile } from './service'
 
-export async function handleGetProfile(request: NextRequest) {
-  try {
-    const supabase = await createClient()
+export const handleGetMyProfile = withHTTPError(async (request) => {
+  const supabase = await createClient()
 
-    // 認証チェック
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return unauthorized('Authentication required')
-    }
-
-    const profile = await getProfile(supabase, user.id)
-    return ok(profile)
-  } catch (error) {
-    return serverError()
+  // 楽観的認証: セッション存在チェック
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw AppError.unauthorized()
   }
-}
+
+  const profile = await getMyProfile(supabase, session.user.id)
+  return ok(profile)
+})
 ```
 
 ```typescript
 // src/app/api/profile/route.ts
-import { handleGetProfile } from '@/features/users'
+import { handleGetMyProfile } from '@/features/users'
 
-export const GET = handleGetProfile
+export const GET = handleGetMyProfile
 ```
 
 **ポイント**:
-- 認証チェックをビジネスロジック実行前に行う
-- 未認証の場合は401ステータスコードで早期リターン
-- 認証済みの場合のみService層を呼び出す
+- Handler層で`getSession()`による楽観的認証を行う
+- 未認証の場合は`AppError.unauthorized()`で401を返す
+- 認証済みユーザーIDをService層に明示的に渡す
 
 ### 例4: パラメータバリデーション付きハンドラー
 
@@ -1606,39 +1125,29 @@ export const GET = handleGetProfile
 // src/features/products/core/handler.ts
 import 'server-only'
 
-import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok, badRequest, notFound, serverError } from '@/lib/api-response'
+import { ok, badRequest } from '@/lib/api-response'
+import { withHTTPError } from '@/lib/with-http-error'
 import { getProduct } from './service'
 
 const paramsSchema = z.object({
   id: z.string().uuid('Invalid product ID format'),
 })
 
-export async function handleGetProduct(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const handleGetProduct = withHTTPError(async (request, context) => {
+  const params = await context.params
+
   // パラメータを検証
   const result = paramsSchema.safeParse(params)
   if (!result.success) {
     return badRequest(result.error.format())
   }
 
-  try {
-    const supabase = await createClient()
-    const product = await getProduct(supabase, result.data.id)
-
-    if (!product) {
-      return notFound('Product not found')
-    }
-
-    return ok(product)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const product = await getProduct(supabase, result.data.id)
+  return ok(product)
+})
 ```
 
 ```typescript
@@ -1704,38 +1213,25 @@ import { NextRequest } from 'next/server'
 ```typescript
 // ✅ 推奨
 // src/features/[feature]/core/handler.ts
-export async function handleCreateResource(request: NextRequest) {
+export const handleCreateResource = withHTTPError(async (request) => {
   const validation = await validateBody(request, schema)
   if (!validation.success) {
     return validation.response // 早期リターン
   }
 
-  try {
-    const supabase = await createClient()
-    const user = await requireAuth(supabase)
-    const result = await createResource(supabase, validation.data)
-    return created(result)
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Authentication required') {
-      return unauthorized(error.message)
-    }
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const result = await createResource(supabase, validation.data)
+  return created(result)
+})
 
-// ❌ 避けるべき（ネストが深い）
+// ❌ 避けるべき（ネストが深い、手動try-catch）
 export async function handleCreateResource(request: NextRequest) {
   const validation = await validateBody(request, schema)
   if (validation.success) {
     try {
       const supabase = await createClient()
-      const user = await requireAuth(supabase)
-      if (user) {
-        const result = await createResource(supabase, validation.data)
-        return created(result)
-      } else {
-        return unauthorized()
-      }
+      const result = await createResource(supabase, validation.data)
+      return created(result)
     } catch (error) {
       return serverError()
     }
@@ -1752,44 +1248,36 @@ export async function handleCreateResource(request: NextRequest) {
 ```typescript
 // ✅ 推奨
 // src/features/products/core/handler.ts
-export async function handleCreateProduct(request: NextRequest) {
+export const handleCreateProduct = withHTTPError(async (request) => {
   const validation = await validateBody(request, schema)
   if (!validation.success) return validation.response
 
-  try {
-    const supabase = await createClient()
-    const result = await createProduct(supabase, validation.data) // Service層
-    return created(result)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const result = await createProduct(supabase, validation.data) // Service層
+  return created(result)
+})
 
 // ❌ 避けるべき（Handler層にビジネスロジックが含まれている）
-export async function handleCreateProduct(request: NextRequest) {
+export const handleCreateProduct = withHTTPError(async (request) => {
   const validation = await validateBody(request, schema)
   if (!validation.success) return validation.response
 
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    // ビジネスロジックをHandler層に書いてはいけない
-    if (!validation.data.name?.trim()) {
-      throw new Error('Name is required')
-    }
-
-    const { data, error } = await supabase
-      .from('products')
-      .insert({ ...validation.data })
-      .select()
-      .single()
-
-    if (error) throw error
-    return created(data)
-  } catch (error) {
-    return serverError()
+  // ビジネスロジックをHandler層に書いてはいけない
+  if (!validation.data.name?.trim()) {
+    throw new Error('Name is required')
   }
-}
+
+  const { data, error } = await supabase
+    .from('products')
+    .insert({ ...validation.data })
+    .select()
+    .single()
+
+  if (error) throw error
+  return created(data)
+})
 ```
 
 ## アンチパターン
@@ -1816,15 +1304,11 @@ export async function GET(request: NextRequest) {
 
 // ✅ 推奨
 // src/features/products/core/handler.ts
-export async function handleGetProducts(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase) // Service層経由
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase) // Service層経由
+  return ok(products)
+})
 
 // src/app/api/products/route.ts
 import { handleGetProducts } from '@/features/products'
@@ -1837,26 +1321,22 @@ export const GET = handleGetProducts
 ```typescript
 // ❌ 避けるべき
 // src/features/products/core/handler.ts
-export async function handleGetProducts(request: NextRequest) {
+export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('products')
     .select('*')
 
-  if (error) return serverError()
+  if (error) throw new AppError(error.message, 500)
   return ok(data)
-}
+})
 
 // ✅ 推奨
-export async function handleGetProducts(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase) // Service層経由
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase) // Service層経由
+  return ok(products)
+})
 ```
 
 ### 外部APIの直接呼び出し
@@ -1865,25 +1345,21 @@ export async function handleGetProducts(request: NextRequest) {
 // ❌ 避けるべき
 import { stripe } from '@/lib/adapters/stripe/client'
 
-export async function handleCreatePayment(request: NextRequest) {
+export const handleCreatePayment = withHTTPError(async (request) => {
   const body = await request.json()
   const paymentIntent = await stripe.paymentIntents.create({
     amount: body.amount,
   })
   return ok(paymentIntent)
-}
+})
 
 // ✅ 推奨
-export async function handleCreateOrder(request: NextRequest) {
+export const handleCreateOrder = withHTTPError(async (request) => {
   const validation = await validateBody(request, schema)
   if (!validation.success) return validation.response
 
-  try {
-    const supabase = await createClient()
-    const order = await createOrder(supabase, validation.data) // Service層経由
-    return created(order)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const order = await createOrder(supabase, validation.data) // Service層経由
+  return created(order)
+})
 ```

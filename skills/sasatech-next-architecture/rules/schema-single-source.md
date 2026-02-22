@@ -98,6 +98,30 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>
 2. **Input型**: `z.infer<typeof schema>`でZodスキーマから導出する
 3. **types.tsは作成しない**: すべての型定義を`schema.ts`に集約する
 
+### src/types/ の役割
+
+`src/types/` ディレクトリはSupabase自動生成型専用である。手動で型を追加しない。
+
+```text
+src/types/
+├── database.ts       # npx supabase gen types で自動生成
+└── index.ts          # エイリアスのエクスポート
+```
+
+```typescript
+// src/types/index.ts
+import type { Database } from './database'
+
+// テーブル行型のエイリアス
+export type ProductRow = Database['public']['Tables']['products']['Row']
+export type UserRow = Database['public']['Tables']['users']['Row']
+```
+
+型が必要な場合は以下のいずれかを行う：
+
+- Featureの`schema.ts`に追加する
+- Supabaseのマイグレーションでテーブルを変更し、型を再生成する
+
 ### server-onlyを付けない
 
 `schema.ts`はフロントエンド（フォームバリデーション）でも使用するため、`server-only`を付けない。

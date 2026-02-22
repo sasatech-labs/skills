@@ -13,9 +13,9 @@ src/
 │       ├── core/
 │       │   ├── schema.ts      # Zodスキーマ + 型定義
 │       │   ├── service.ts     # server-only
-│       │   └── repository.ts  # server-only
-│       ├── fetcher.ts     # クライアント用API呼び出し
-│       └── hooks.ts       # React Hooks
+│       │   ├── repository.ts  # server-only
+│       │   ├── fetcher.ts     # API呼び出し（SSR/CSR共通）
+│       │   └── hooks.ts       # React Hooks
 ├── components/       # 共通UIコンポーネント
 ├── lib/              # ユーティリティ
 └── types/            # Supabase生成型のみ
@@ -127,40 +127,41 @@ export const productRepository = {
 }
 ```
 
-### route.ts (API Route)
+### handler.ts
 
 ```typescript
 import 'server-only'
 
-import { NextRequest } from 'next/server'
-import { getProducts, createProduct } from '@/features/products'
-import { createProductSchema } from '@/features/products/core/schema'
 import { createClient } from '@/lib/supabase/server'
-import { ok, created, serverError } from '@/lib/api-response'
+import { ok, created } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
+import { createProductSchema } from './schema'
+import { getProducts, createProduct } from './service'
 
-export async function GET(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const products = await getProducts(supabase)
-    return ok(products)
-  } catch (error) {
-    return serverError()
-  }
-}
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return ok(products)
+})
 
-export async function POST(request: NextRequest) {
+export const handleCreateProduct = withHTTPError(async (request) => {
   const validation = await validateBody(request, createProductSchema)
   if (!validation.success) return validation.response
 
-  try {
-    const supabase = await createClient()
-    const product = await createProduct(supabase, validation.data)
-    return created(product)
-  } catch (error) {
-    return serverError()
-  }
-}
+  const supabase = await createClient()
+  const product = await createProduct(supabase, validation.data)
+  return created(product)
+})
+```
+
+### route.ts (API Route)
+
+```typescript
+import { handleGetProducts, handleCreateProduct } from '@/features/products'
+
+export const GET = handleGetProducts
+export const POST = handleCreateProduct
 ```
 
 ## 命名規則
@@ -182,8 +183,8 @@ export async function POST(request: NextRequest) {
 | Schema | `src/features/[feature]/core/schema.ts` |
 | Service | `src/features/[feature]/core/service.ts` |
 | Repository | `src/features/[feature]/core/repository.ts` |
-| Fetcher | `src/features/[feature]/fetcher.ts` |
-| Hooks | `src/features/[feature]/hooks.ts` |
+| Fetcher | `src/features/[feature]/core/fetcher.ts` |
+| Hooks | `src/features/[feature]/core/hooks.ts` |
 | Components | `src/features/[feature]/components/` |
 
 ## レスポンスヘルパー
@@ -201,10 +202,14 @@ serverError()      // 500
 
 ## エラーハンドリング
 
+Handler関数は`withHTTPError`でラップする。AppErrorは自動的にHTTPレスポンスに変換される。
+
 ```typescript
+// Service/Repository層でAppErrorをスロー
 throw AppError.badRequest('Invalid input', 'VALIDATION_ERROR')
 throw AppError.unauthorized()
 throw AppError.forbidden('Cannot edit others posts')
 throw AppError.notFound('Product not found')
 throw new AppError('Custom error', 400, 'CUSTOM_CODE')
 ```
+

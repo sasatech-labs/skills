@@ -497,3 +497,8 @@ CREATE POLICY "Admins can delete profiles"
     )
   );
 ```
+
+## 関連ルール
+
+- [data-pagination](../rules/data-pagination.md) - ページネーション必須ルール
+- [data-comment-required](../rules/data-comment-required.md) - テーブル・カラムコメント必須ルール

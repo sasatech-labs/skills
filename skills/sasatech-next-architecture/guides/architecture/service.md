@@ -8,6 +8,7 @@ Service層は、Feature-based Layer Architectureにおけるビジネスロジ�
 
 **主要な責務**:
 - ビジネスロジックの実装
+- 認可チェック（所有権、ロール）
 - 複数のRepositoryやAdapterの組み合わせ
 - データの加工・変換
 - ドメインルールの検証
@@ -264,6 +265,7 @@ export async function createOrder(
     `,
   })
 
+
   return {
     order,
     clientSecret: paymentIntent.clientSecret,
@@ -308,6 +310,7 @@ export async function createSubscription(
     customerId: input.stripeCustomerId,
     priceId: input.planId,
   })
+
 
   return subscriptionRepository.create(supabase, {
     userId,
@@ -447,6 +450,7 @@ export async function moveProductToCategory(
   }
 
   // 3. 商品のカテゴリを更新
+
   return productRepository.update(supabase, productId, {
     categoryId: newCategoryId,
   })
@@ -515,6 +519,7 @@ export async function processPayment(
       `,
     })
 
+  
     return { payment, order }
   } catch (error) {
     // 決済失敗時の処理
@@ -577,6 +582,7 @@ export async function createAndSendInvoice(
     `,
   })
 
+
   return invoice
 }
 
@@ -588,6 +594,77 @@ function generateInvoiceNumber(): string {
   return `INV-${year}${month}-${random}`
 }
 ```
+
+## 認可チェック
+
+Service層は厳密な認可を担当する。Handler層から渡された認証済みユーザーIDを使用し、ビジネスルールに基づいてアクセス権限を検証する。
+
+詳細は[認証・認可ガイド](../authentication.md)を参照。
+
+### 所有権チェック
+
+リソースの所有者のみが操作できる場合、Service層でインラインに検証する。
+
+```typescript
+// src/features/posts/core/service.ts
+import 'server-only'
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Post, UpdatePostInput } from './schema'
+import { AppError } from '@/lib/errors'
+import { postRepository } from './repository'
+
+export async function updatePost(
+  supabase: SupabaseClient,
+  userId: string,
+  postId: string,
+  input: UpdatePostInput
+): Promise<Post> {
+  const post = await postRepository.findById(supabase, postId)
+
+  // 所有権チェック
+  if (post.userId !== userId) {
+    throw AppError.forbidden('You can only edit your own posts')
+  }
+
+  return postRepository.update(supabase, postId, input)
+}
+```
+
+### ロールチェック
+
+管理者や特定のロールが必要な操作は、Service層でインラインに検証する。
+
+```typescript
+// src/features/admin/core/service.ts
+import 'server-only'
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { AppError } from '@/lib/errors'
+import { userRepository } from '@/features/users/core/repository'
+import { analyticsRepository } from './repository'
+
+export async function getAdminDashboard(
+  supabase: SupabaseClient,
+  userId: string
+) {
+  // ロールチェック
+  const user = await userRepository.findById(supabase, userId)
+  if (user.role !== 'admin') {
+    throw AppError.forbidden('Admin access required')
+  }
+
+  return analyticsRepository.getDashboard(supabase)
+}
+```
+
+### 認可パターンの選択
+
+| パターン | 使用場面 | エラーコード |
+|---------|---------|-------------|
+| 所有権チェック | 自分のリソースのみ操作可能 | 403 Forbidden |
+| ロールチェック | 特定ロール（admin等）が必要 | 403 Forbidden |
+| 複合チェック | 所有者またはadminが操作可能 | 403 Forbidden |
 
 ## エラーハンドリング
 
@@ -745,6 +822,7 @@ export async function createOrder(
       console.error('Failed to send order confirmation email:', emailError)
     }
 
+  
     return {
       order,
       clientSecret: paymentIntent.clientSecret,
@@ -803,6 +881,7 @@ export async function transferMoney(
   if (error) {
     throw new AppError(error.message, 500)
   }
+
 
   return data
 }
@@ -917,6 +996,7 @@ export async function createReservation(
       paymentIntentId: paymentIntent.id,
     })
 
+  
     return {
       reservation,
       clientSecret: paymentIntent.clientSecret,
@@ -1295,6 +1375,7 @@ export async function createOrder(
     html: `<h1>ご注文ありがとうございます</h1><p>注文番号: ${order.id}</p>`,
   })
 
+
   return {
     order,
     clientSecret: paymentIntent.clientSecret,
@@ -1341,6 +1422,7 @@ export async function transferMoney(
   if (error) {
     throw new AppError(error.message, 500)
   }
+
 
   return data
 }

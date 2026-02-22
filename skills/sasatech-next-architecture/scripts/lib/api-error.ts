@@ -1,11 +1,11 @@
 /**
  * クライアントサイド用 API エラークラス
  */
-export class ApiError extends Error {
+class _ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly code?: string,
+    public readonly code: string,
     public readonly details?: Array<{ field: string; message: string }>
   ) {
     super(message)
@@ -40,3 +40,6 @@ export class ApiError extends Error {
     return this.status === 404
   }
 }
+
+export type ApiError = _ApiError
+export const ApiError = _ApiError

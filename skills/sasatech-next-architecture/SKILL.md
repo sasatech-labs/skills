@@ -1,20 +1,58 @@
 ---
 name: sasatech-next-architecture
-description: Next.js App Router architecture with Feature-based Layer Architecture pattern. Use when creating API routes, services, repositories, or components with Supabase and TypeScript. Covers Handler/Service/Repository, Adapter layers, Zod validation, and feature module structure.
+description: Feature-Based Layered Architecture for Next.js (App Router) with Supabase. Use when creating API routes, services, repositories, or components with TypeScript. Covers Handler/Service/Repository/Adapter layers, Zod validation, and feature module structure.
 ---
 
 # SasaTech Architecture
 
-## アーキテクチャ概要
+## What This
 
-Feature-based Layer Architecture for Next.js (App Router + Supabase)
+Feature-Based Layered Architecture for Next.js (App Router) with Supabase のスキル。
+
+Handler / Service / Repository / Adapter の4レイヤー構成と、機能(Features)単位のモジュール分割パターンを定義する。
+ガイド（設計思想・実装方法）とルール（制約・判定基準）の2種類のドキュメントで構成する。
+
+## How to Use
+
+このスキルと併せて、以下の外部スキルの導入を推奨します。
+
+```bash
+npx skills add https://github.com/supabase/agent-skills --skill supabase-postgres-best-practices
+npx skills add https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
+npx skills add https://github.com/vercel-labs/agent-skills --skill web-design-guidelines
+```
+
+| スキル | 用途 |
+|--------|------|
+| `supabase-postgres-best-practices` | Supabase / PostgreSQL のクエリ最適化、RLS、マイグレーション |
+| `vercel-react-best-practices` | React / Next.js のコンポーネント設計、パフォーマンス最適化 |
+| `web-design-guidelines` | アクセシビリティ、レスポンシブデザイン、UI/UX |
+
+---
+
+## Default Stack
+
+| カテゴリ | 技術 |
+|----------|------|
+| Framework | Next.js (App Router) |
+| Database / BaaS | Supabase |
+| Language | TypeScript |
+| Validation | Zod |
+| Data Fetching | SWR |
+| Logging | pino |
+| Formatter | Biome |
+| Linter | Biome + ESLint |
+
+## About Feature-Based Layered Architecture
+
+Feature-Based Layered Architecture for Next.js (App Router) with Supabase
 
 ### レイヤー構成
 
 ```
-Handler                 リクエスト/レスポンス、バリデーション、認証
+Handler                 リクエスト/レスポンス、バリデーション、楽観的認証
         ↓
-Service                 ビジネスロジック、複数 Repository 連携
+Service                 ビジネスロジック、厳密な認可、複数 Repository 連携
         ↓
 Repository              データアクセス
 Adapter                 外部 API 連携（Stripe, Resend 等）
@@ -50,36 +88,27 @@ src/
 
 ---
 
-## ガイドとルールの違い
-
-このスキルは **ガイド** と **ルール** の2種類のドキュメントで構成されています。
-
-| 項目 | ガイド | ルール |
-|------|--------|--------|
-| **目的** | アーキテクチャや実装パターンの理解を深める | 守るべき制約を明確に定義する |
-| **内容** | HOW / WHY — 設計思想、セットアップ手順、コード例 | DO / DON'T — NG例とOK例による判定基準 |
-| **形式** | チュートリアル形式 | メタデータ（impact, tags）付きの短いルール形式 |
-| **読むタイミング** | プロジェクト参加時の学習、設計判断の参考 | コード実装時の準拠確認、コードレビュー |
-
----
-
-## ガイド
+## Guides
 
 | ガイド | 説明 |
 |--------|------|
 | [architecture.md](guides/architecture.md) | Feature-based Layer Architecture の全体設計。レイヤー構成、責務分離、ディレクトリ構成 |
-| [architecture/handler.md](guides/architecture/handler.md) | Handler層の実装。リクエスト処理、バリデーション、認証チェック、エラーハンドリング |
-| [architecture/service.md](guides/architecture/service.md) | Service層の実装。ビジネスロジック、Repository/Adapter連携、トランザクション管理 |
+| [architecture/handler.md](guides/architecture/handler.md) | Handler層の実装。リクエスト処理、バリデーション、楽観的認証、エラーハンドリング |
+| [architecture/service.md](guides/architecture/service.md) | Service層の実装。ビジネスロジック、厳密な認可、Repository/Adapter連携、トランザクション管理 |
 | [architecture/repository.md](guides/architecture/repository.md) | Repository層の実装。データアクセスの抽象化、Supabaseクエリのカプセル化 |
 | [architecture/adapter.md](guides/architecture/adapter.md) | Adapter層の実装。外部サービス（決済、メール、AI等）との連携をカプセル化 |
+| [authentication.md](guides/authentication.md) | 二段階認証・認可戦略。楽観的認証(Handler)と厳密な認可(Service)の実装パターン |
 | [testing.md](guides/testing.md) | レイヤーごとのテスト戦略。Unit / Integration テストの範囲とモック方針 |
 | [database.md](guides/database.md) | データベース設計。コメント規約、マイグレーション、Supabase との連携 |
 | [logging.md](guides/logging.md) | pino を使用した構造化ログの実装。レイヤーごとのログ出力方針 |
 | [setup.md](guides/setup.md) | 新規プロジェクトのセットアップ手順。依存パッケージ、基盤ファイルの配置 |
+| [fetch-strategy.md](guides/fetch-strategy.md) | データ取得戦略。SSR/CSRの選択基準と実装パターン |
+| [error-handling.md](guides/error-handling.md) | AppErrorクラスとwithHTTPErrorによるエラーハンドリング設計 |
+| [wrappers.md](guides/wrappers.md) | withHTTPError(Handler)のラッパーユーティリティ |
 
 ---
 
-## ルール
+## Rules
 
 ### カテゴリ
 
@@ -116,13 +145,16 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 | [arch-feature-structure](rules/arch-feature-structure.md) | CRITICAL | 機能単位で `features/` にモジュール化 |
 | [arch-external-services](rules/arch-external-services.md) | HIGH | Stripe, Resend 等の外部サービスは Adapter 経由 |
 | [arch-logging-strategy](rules/arch-logging-strategy.md) | MEDIUM | pino で構造化ログ、console.log 禁止 |
+| [arch-fetch-strategy](rules/arch-fetch-strategy.md) | CRITICAL | SSR/CSR問わず、fetcher経由でAPI Route呼び出し |
+| [arch-logging-levels](rules/arch-logging-levels.md) | MEDIUM | ログレベルをレイヤーと状況に応じて使い分け |
+| [arch-auth-strategy](rules/arch-auth-strategy.md) | HIGH | Handler層で楽観的認証、Service層で厳密な認可。共有ヘルパー関数禁止 |
+| [arch-public-api](rules/arch-public-api.md) | MEDIUM | Feature の index.ts は公開API（Service関数、Fetcher関数、型）のみexport |
 
 ### データ (`data-`)
 
 | ルール | Impact | 説明 |
 |--------|--------|------|
-| [data-no-getall](rules/data-no-getall.md) | HIGH | 全件取得禁止、MAX_LIMIT でサーバー側上限を強制 |
-| [data-pagination](rules/data-pagination.md) | HIGH | リスト取得は必ずページネーション付きで総件数を返却 |
+| [data-pagination](rules/data-pagination.md) | HIGH | 全件取得禁止、MAX_LIMITでサーバー側上限を強制、ページネーション必須 |
 | [data-comment-required](rules/data-comment-required.md) | LOW | テーブル・カラムに日本語コメント必須 |
 
 ### サーバーサイド保護 (`server-`)
@@ -130,23 +162,24 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 | ルール | Impact | 説明 |
 |--------|--------|------|
 | [server-supabase-via-api](rules/server-supabase-via-api.md) | CRITICAL | クライアントから Supabase 直接使用禁止、API Route 経由必須 |
-| [server-only-directive](rules/server-only-directive.md) | HIGH | Service/Repository に `import 'server-only'` を必須で記述 |
+| [server-only-directive](rules/server-only-directive.md) | HIGH | Handler/Service/Repository/Adapter に `import 'server-only'` を必須で記述 |
 | [server-no-public-env](rules/server-no-public-env.md) | HIGH | 機密情報（Supabase, API キー）に `NEXT_PUBLIC_` 禁止 |
 
 ### スキーマ・型定義 (`schema-`)
 
 | ルール | Impact | 説明 |
 |--------|--------|------|
-| [schema-single-source](rules/schema-single-source.md) | HIGH | 型定義は `schema.ts` に一元化、分散禁止 |
-| [schema-no-types-file](rules/schema-no-types-file.md) | MEDIUM | Feature 内に `types.ts` 作成禁止 |
+| [schema-single-source](rules/schema-single-source.md) | HIGH | 型定義は `schema.ts` に一元化、`types.ts` 作成禁止 |
 | [schema-zod-infer](rules/schema-zod-infer.md) | MEDIUM | Input 型は手書きせず `z.infer<typeof schema>` で導出 |
 
 ### レスポンス (`response-`)
 
 | ルール | Impact | 説明 |
 |--------|--------|------|
+| [response-with-http-error](rules/response-with-http-error.md) | HIGH | Handler関数は withHTTPError でラップ必須 |
 | [response-apperror](rules/response-apperror.md) | MEDIUM | エラーは `AppError` クラスでスロー、生の Error 禁止 |
 | [response-helpers](rules/response-helpers.md) | LOW | `ok()`, `created()`, `notFound()` 等のヘルパーを使用 |
+| [response-adapter-errors](rules/response-adapter-errors.md) | HIGH | Adapter層は外部APIエラーをAppErrorに変換してスロー |
 
 ### テスト (`test-`)
 
@@ -161,8 +194,7 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 
 | ルール | Impact | 説明 |
 |--------|--------|------|
-| [validation-body](rules/validation-body.md) | MEDIUM | POST/PATCH のリクエストボディは Zod でバリデーション |
-| [validation-params](rules/validation-params.md) | MEDIUM | URL パラメータ（ID 等）も Zod でバリデーション |
+| [validation](rules/validation.md) | MEDIUM | リクエスト入力値（ボディ、パスパラメータ、クエリパラメータ）をZodでバリデーション |
 
 ### 命名規則 (`naming-`)
 
@@ -170,10 +202,10 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 |--------|--------|------|
 | [naming-files](rules/naming-files.md) | LOW | ファイル・ディレクトリ名は kebab-case（フレームワーク規約ファイルを除く） |
 | [naming-methods](rules/naming-methods.md) | LOW | Repository: `findMany`/`findById`、Service: `get*`/`create*` |
+| [naming-exports](rules/naming-exports.md) | MEDIUM | `_` prefix内部実装 + ファイル末尾でexport集約 |
 
 ### フロントエンド (`frontend-`)
 
 | ルール | Impact | 説明 |
 |--------|--------|------|
-| [frontend-fetcher](rules/frontend-fetcher.md) | LOW | Feature ごとに `fetcher.ts` を作成して API 呼び出しを集約 |
-| [frontend-hooks](rules/frontend-hooks.md) | LOW | SWR を使用した Hook パターンでデータ取得 |
+| [frontend-data-fetching](rules/frontend-data-fetching.md) | LOW | Featureごとに`fetcher.ts`と`hooks.ts`を作成、コンポーネントから直接fetch禁止 |

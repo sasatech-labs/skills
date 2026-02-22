@@ -1,7 +1,7 @@
 ---
 id: naming-files
 title: ファイル・ディレクトリ命名規則
-category: naming
+category: 命名規則
 impact: LOW
 tags: [naming, files, directory, convention, kebab-case]
 ---
@@ -74,14 +74,14 @@ src/features/products/
 │   ├── index.ts
 │   ├── schema.ts            # 単数形
 │   ├── service.ts           # 単数形
-│   └── repository.ts        # 単数形
-├── components/
-│   ├── server/
-│   │   └── product-list.tsx
-│   └── client/
-│       └── product-form.tsx
-├── fetcher.ts
-└── hooks.ts
+│   ├── repository.ts        # 単数形
+│   ├── fetcher.ts           # 単数形
+│   └── hooks.ts             # 単数形
+└── components/
+    ├── server/
+    │   └── product-list.tsx
+    └── client/
+        └── product-form.tsx
 ```
 
 ### 例: API Route
