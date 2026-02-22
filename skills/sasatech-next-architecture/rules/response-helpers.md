@@ -42,7 +42,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok, created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts, createProduct } from './service'
 import { validateBody } from '@/lib/validation'
@@ -52,10 +52,10 @@ import { createProductSchema } from './schema'
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 
-// OK: 201 Created は created() ヘルパーで明示的に表現
+// OK: 201 Created は AppResponse.created() ヘルパーで明示的に表現
 export const handleCreateProduct = withHTTPError(async (request) => {
   const validation = await validateBody(request, createProductSchema)
   if (!validation.success) {
@@ -64,7 +64,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
 ```
 
@@ -74,24 +74,24 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
 1. **形式の統一**: すべてのAPIエンドポイントで同じレスポンス構造を保証する
 2. **保守性の向上**: レスポンス形式の変更が一箇所で完結する
-3. **可読性の向上**: `ok()`, `created()`, `notFound()` などのヘルパー名が意図を明確にする
+3. **可読性の向上**: `AppResponse.ok()`, `AppResponse.created()`, `AppResponse.notFound()` などのメソッド名が意図を明確にする
 4. **ステータスコードの統一**: HTTPステータスコードの指定方法が統一される
 
 違反した場合、レスポンス形式が不統一になり、フロントエンド側でのエラーハンドリングが複雑化する可能性がある。
 
 ## レスポンスヘルパー一覧
 
-| ヘルパー | Status | 用途 |
+| メソッド | Status | 用途 |
 |---------|--------|------|
-| `ok(data)` | 200 | GET/PATCH 成功 |
-| `created(data)` | 201 | POST 成功 |
-| `noContent()` | 204 | DELETE 成功 |
-| `badRequest(message?, errorCode?, details?)` | 400 | バリデーションエラー |
-| `unauthorized(message?, errorCode?)` | 401 | 未認証 |
-| `forbidden(message?, errorCode?)` | 403 | 権限不足 |
-| `notFound(message?, errorCode?)` | 404 | リソースなし |
-| `conflict(message?, errorCode?)` | 409 | 重複 |
-| `serverError(message?, errorCode?)` | 500 | サーバーエラー |
+| `AppResponse.ok(data)` | 200 | GET/PATCH 成功 |
+| `AppResponse.created(data)` | 201 | POST 成功 |
+| `AppResponse.noContent()` | 204 | DELETE 成功 |
+| `AppResponse.badRequest(message?, errorCode?, details?)` | 400 | バリデーションエラー |
+| `AppResponse.unauthorized(message?, errorCode?)` | 401 | 未認証 |
+| `AppResponse.forbidden(message?, errorCode?)` | 403 | 権限不足 |
+| `AppResponse.notFound(message?, errorCode?)` | 404 | リソースなし |
+| `AppResponse.conflict(message?, errorCode?)` | 409 | 重複 |
+| `AppResponse.serverError(message?, errorCode?)` | 500 | サーバーエラー |
 
 ## レスポンス形式
 
@@ -119,78 +119,83 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 
-export function ok<T>(data: T) {
-  return NextResponse.json({ data }, { status: 200 })
+class _AppResponse {
+  static ok<T>(data: T) {
+    return NextResponse.json({ data }, { status: 200 })
+  }
+
+  static created<T>(data: T) {
+    return NextResponse.json({ data }, { status: 201 })
+  }
+
+  static noContent() {
+    return new NextResponse(null, { status: 204 })
+  }
+
+  static badRequest(
+    message: string = 'Bad request',
+    errorCode: string = 'BAD_REQUEST',
+    details?: Array<{ field: string; message: string }>
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message, ...(details && { details }) } },
+      { status: 400 }
+    )
+  }
+
+  static unauthorized(
+    message: string = 'Unauthorized',
+    errorCode: string = 'UNAUTHORIZED'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 401 }
+    )
+  }
+
+  static forbidden(
+    message: string = 'Forbidden',
+    errorCode: string = 'FORBIDDEN'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 403 }
+    )
+  }
+
+  static notFound(
+    message: string = 'Not found',
+    errorCode: string = 'NOT_FOUND'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 404 }
+    )
+  }
+
+  static conflict(
+    message: string = 'Conflict',
+    errorCode: string = 'CONFLICT'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 409 }
+    )
+  }
+
+  static serverError(
+    message: string = 'Internal server error',
+    errorCode: string = 'INTERNAL_ERROR'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 500 }
+    )
+  }
 }
 
-export function created<T>(data: T) {
-  return NextResponse.json({ data }, { status: 201 })
-}
-
-export function noContent() {
-  return new NextResponse(null, { status: 204 })
-}
-
-export function badRequest(
-  message: string = 'Bad request',
-  errorCode: string = 'BAD_REQUEST',
-  details?: Array<{ field: string; message: string }>
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message, ...(details && { details }) } },
-    { status: 400 }
-  )
-}
-
-export function unauthorized(
-  message: string = 'Unauthorized',
-  errorCode: string = 'UNAUTHORIZED'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 401 }
-  )
-}
-
-export function forbidden(
-  message: string = 'Forbidden',
-  errorCode: string = 'FORBIDDEN'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 403 }
-  )
-}
-
-export function notFound(
-  message: string = 'Not found',
-  errorCode: string = 'NOT_FOUND'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 404 }
-  )
-}
-
-export function conflict(
-  message: string = 'Conflict',
-  errorCode: string = 'CONFLICT'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 409 }
-  )
-}
-
-export function serverError(
-  message: string = 'Internal server error',
-  errorCode: string = 'INTERNAL_ERROR'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 500 }
-  )
-}
+export type AppResponse = _AppResponse
+export const AppResponse = _AppResponse
 ```
 
 ## 参照

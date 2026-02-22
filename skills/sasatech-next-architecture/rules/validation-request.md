@@ -1,5 +1,5 @@
 ---
-id: validation
+id: validation-request
 title: リクエスト入力値のバリデーション
 category: バリデーション
 impact: MEDIUM
@@ -22,7 +22,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, body)
-  return created(product)
+  return AppResponse.created(product)
 })
 ```
 
@@ -35,7 +35,7 @@ export const handleGetProduct = withHTTPError(async (request, context) => {
   // NG: バリデーションなしで直接使用
   const supabase = await createClient()
   const product = await getProduct(supabase, id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 ```
 
@@ -48,7 +48,7 @@ export const handleGetProduct = withHTTPError(async (request, context) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
@@ -63,7 +63,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
 ```
 
@@ -75,7 +75,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok, badRequest } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProduct } from './service'
 
@@ -88,12 +88,12 @@ export const handleGetProduct = withHTTPError(async (request, context) => {
   const params = await context.params
   const result = paramsSchema.safeParse(params)
   if (!result.success) {
-    return badRequest('Invalid product ID format')
+    return AppResponse.badRequest('Invalid product ID format')
   }
 
   const supabase = await createClient()
   const product = await getProduct(supabase, result.data.id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 ```
 
@@ -104,7 +104,7 @@ export const handleGetProduct = withHTTPError(async (request, context) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateSearchParams } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { productSearchSchema } from './schema'
@@ -119,7 +119,7 @@ export const handleGetProducts = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const products = await getProducts(supabase, validation.data)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 ```
 
@@ -145,16 +145,16 @@ import 'server-only'
 
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
-import { badRequest } from './api-response'
+import { AppResponse } from './api-response'
 
-type ValidationResult<T> =
+type _ValidationResult<T> =
   | { success: true; data: T }
   | { success: false; response: Response }
 
-export async function validateBody<T>(
+async function _validateBody<T>(
   request: NextRequest,
   schema: z.ZodSchema<T>
-): Promise<ValidationResult<T>> {
+): Promise<_ValidationResult<T>> {
   try {
     const body = await request.json()
     const data = schema.parse(body)
@@ -164,25 +164,28 @@ export async function validateBody<T>(
       const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return {
         success: false,
-        response: badRequest(message),
+        response: AppResponse.badRequest(message),
       }
     }
     return {
       success: false,
-      response: badRequest('Invalid request body'),
+      response: AppResponse.badRequest('Invalid request body'),
     }
   }
 }
+
+export type ValidationResult<T> = _ValidationResult<T>
+export const validateBody = _validateBody
 ```
 
 ### validateSearchParams
 
 ```typescript
 // src/lib/validation.ts
-export function validateSearchParams<T>(
+function _validateSearchParams<T>(
   request: NextRequest,
   schema: z.ZodSchema<T>
-): ValidationResult<T> {
+): _ValidationResult<T> {
   try {
     const params = Object.fromEntries(request.nextUrl.searchParams)
     const data = schema.parse(params)
@@ -192,15 +195,17 @@ export function validateSearchParams<T>(
       const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return {
         success: false,
-        response: badRequest(message),
+        response: AppResponse.badRequest(message),
       }
     }
     return {
       success: false,
-      response: badRequest('Invalid query parameters'),
+      response: AppResponse.badRequest('Invalid query parameters'),
     }
   }
 }
+
+export const validateSearchParams = _validateSearchParams
 ```
 
 ## 参照

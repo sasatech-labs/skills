@@ -2,7 +2,7 @@
 
 ## 概要
 
-エラーハンドリングは、`AppError`クラスと`withHTTPError`ラッパーを中心に構成される、レイヤー横断的な仕組みである。Service/Repository層で発生するエラーを`AppError`で表現し、Handler層の`withHTTPError`が自動的にHTTPレスポンスに変換する。
+エラーハンドリングは、`AppError`クラスと`withHTTPError`ラッパーを中心に構成される、レイヤー横断的な仕組みである。Service/Repository/Adapter層で発生するエラーを`AppError`で表現し、Handler層の`withHTTPError`が自動的にHTTPレスポンスに変換する。
 
 **対象範囲**: AppErrorクラス、withHTTPErrorラッパー、レイヤーごとのエラー処理方針
 
@@ -36,7 +36,7 @@
 
 ```typescript
 // src/lib/errors.ts
-export class AppError extends Error {
+class _AppError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
@@ -47,25 +47,28 @@ export class AppError extends Error {
   }
 
   static badRequest(message: string, code?: string) {
-    return new AppError(message, 400, code ?? 'BAD_REQUEST')
+    return new _AppError(message, 400, code ?? 'BAD_REQUEST')
   }
 
   static unauthorized(message = 'Unauthorized') {
-    return new AppError(message, 401, 'UNAUTHORIZED')
+    return new _AppError(message, 401, 'UNAUTHORIZED')
   }
 
   static forbidden(message = 'Forbidden') {
-    return new AppError(message, 403, 'FORBIDDEN')
+    return new _AppError(message, 403, 'FORBIDDEN')
   }
 
   static notFound(message = 'Not found') {
-    return new AppError(message, 404, 'NOT_FOUND')
+    return new _AppError(message, 404, 'NOT_FOUND')
   }
 
   static conflict(message: string, code?: string) {
-    return new AppError(message, 409, code ?? 'CONFLICT')
+    return new _AppError(message, 409, code ?? 'CONFLICT')
   }
 }
+
+export type AppError = _AppError
+export const AppError = _AppError
 ```
 
 **ポイント**:
@@ -169,7 +172,7 @@ Handler関数は`withHTTPError`でラップするだけで、エラーハンド�
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { updatePostSchema } from './schema'
@@ -186,36 +189,44 @@ export const handleUpdatePost = withHTTPError(async (request, context) => {
 
   const supabase = await createClient()
   const post = await updatePost(supabase, id, validation.data)
-  return ok(post)
+  return AppResponse.ok(post)
 })
 ```
 
 ### 例4: エラーコードによるフロントエンド判別
 
-フロントエンドでエラーコードを使用して、ユーザーに適切なメッセージを表示する。
+フロントエンドでエラーコードを使用して、ユーザーに適切なメッセージを表示する。共通fetcherユーティリティの`mutate`を使用し、`ApiError`のcodeプロパティで分岐する。
 
 ```typescript
 // src/features/posts/core/fetcher.ts
-import { fetcher } from '@/lib/fetcher'
+import { mutate } from '@/lib/fetcher'
+import type { Post, UpdatePostInput } from './schema'
 
-export const postFetcher = {
-  async update(id: string, input: UpdatePostInput) {
-    const res = await fetcher(`/api/posts/${id}`, {
+const BASE_URL = '/api/posts'
+
+const _postsFetcher = {
+  update(id: string, input: UpdatePostInput): Promise<Post> {
+    return mutate<Post>(`${BASE_URL}/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(input),
+      body: input,
     })
-
-    if (!res.ok) {
-      const { error } = await res.json()
-      // エラーコードで分岐
-      if (error.error_code === 'POST_ARCHIVED') {
-        throw new Error('アーカイブ済みの投稿は編集できません')
-      }
-      throw new Error(error.message)
-    }
-
-    return res.json()
   },
+}
+
+export const postsFetcher = _postsFetcher
+```
+
+```typescript
+// コンポーネントでのエラーハンドリング
+import { ApiError } from '@/lib/api-error'
+
+try {
+  await postsFetcher.update(id, input)
+} catch (error) {
+  if (error instanceof ApiError && error.code === 'POST_ARCHIVED') {
+    // エラーコードで分岐
+    showToast('アーカイブ済みの投稿は編集できません')
+  }
 }
 ```
 

@@ -56,9 +56,10 @@ it('商品一覧を返す', async () => {
 
 | テスト対象 | モック対象 | モックしない |
 |-----------|-----------|-------------|
-| Handler | Service | Repository, Supabase |
-| Service | Repository | Supabase |
+| Handler | Service | Repository, Adapter, Supabase |
+| Service | Repository, Adapter | Supabase |
 | Repository | Supabase Client | - |
+| Adapter | 外部APIクライアント | - |
 
 ## 理由
 

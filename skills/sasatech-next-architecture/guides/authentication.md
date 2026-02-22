@@ -44,7 +44,7 @@ Handler層では`supabase.auth.getSession()`でセッションの存在を確認
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getMyProfile } from './service'
@@ -60,7 +60,7 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
 
   // Service層に認証済みユーザーIDを渡す
   const profile = await getMyProfile(supabase, session.user.id)
-  return ok(profile)
+  return AppResponse.ok(profile)
 })
 ```
 
@@ -115,7 +115,7 @@ export async function updatePost(
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getMyProfile } from './service'
@@ -130,7 +130,7 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
   }
 
   const profile = await getMyProfile(supabase, session.user.id)
-  return ok(profile)
+  return AppResponse.ok(profile)
 })
 ```
 
@@ -164,7 +164,7 @@ export async function getMyProfile(
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
@@ -188,7 +188,7 @@ export const handleUpdatePost = withHTTPError(async (request, context) => {
 
   // Service層で所有権チェックを行う
   const post = await updatePost(supabase, session.user.id, id, validation.data)
-  return ok(post)
+  return AppResponse.ok(post)
 })
 ```
 
@@ -227,7 +227,7 @@ export async function updatePost(
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getAdminDashboard } from './service'
@@ -243,7 +243,7 @@ export const handleGetAdminDashboard = withHTTPError(async (request) => {
 
   // ロールチェックはService層で行う
   const dashboard = await getAdminDashboard(supabase, session.user.id)
-  return ok(dashboard)
+  return AppResponse.ok(dashboard)
 })
 ```
 
@@ -253,7 +253,7 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AppError } from '@/lib/errors'
-import { userRepository } from '@/features/users/core/repository'
+import { getUserById } from '@/features/users'
 import { analyticsRepository } from './repository'
 
 export async function getAdminDashboard(
@@ -261,7 +261,8 @@ export async function getAdminDashboard(
   userId: string
 ) {
   // 厳密な認可: ロールチェック
-  const user = await userRepository.findById(supabase, userId)
+  // 他FeatureのデータはService関数経由で取得する
+  const user = await getUserById(supabase, userId)
   if (user.role !== 'admin') {
     throw AppError.forbidden('Admin access required')
   }
@@ -280,8 +281,8 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AppError } from '@/lib/errors'
+import { getUserById } from '@/features/users'
 import { postRepository } from './repository'
-import { userRepository } from '@/features/users/core/repository'
 
 export async function deletePost(
   supabase: SupabaseClient,
@@ -289,7 +290,8 @@ export async function deletePost(
   postId: string
 ): Promise<void> {
   const post = await postRepository.findById(supabase, postId)
-  const user = await userRepository.findById(supabase, userId)
+  // 他FeatureのデータはService関数経由で取得する
+  const user = await getUserById(supabase, userId)
 
   // 複合認可: 所有者またはadmin
   if (post.userId !== userId && user.role !== 'admin') {
@@ -329,7 +331,7 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
   }
 
   const profile = await getMyProfile(supabase, session.user.id)
-  return ok(profile)
+  return AppResponse.ok(profile)
 })
 ```
 
@@ -348,7 +350,7 @@ export const handleDeleteUser = withHTTPError(async (request, context) => {
 
   const { id } = await context.params
   await deleteUser(supabase, id)
-  return noContent()
+  return AppResponse.noContent()
 })
 ```
 
@@ -365,7 +367,7 @@ export const handleDeleteUser = withHTTPError(async (request, context) => {
 
   // Service層に委譲（ロールチェックはService層内で行う）
   await deleteUser(supabase, session.user.id, id)
-  return noContent()
+  return AppResponse.noContent()
 })
 ```
 

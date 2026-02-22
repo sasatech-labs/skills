@@ -63,7 +63,7 @@ Handler関数が入力をZodで検証する。
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
@@ -77,7 +77,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
 ```
 
@@ -90,7 +90,7 @@ Handler関数が`getSession()`でセッション存在を確認し、認証済�
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getMyProfile } from './service'
@@ -105,7 +105,7 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
   }
 
   const profile = await getMyProfile(supabase, session.user.id)
-  return ok(profile)
+  return AppResponse.ok(profile)
 })
 ```
 

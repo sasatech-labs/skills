@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
     console.log('Creating product')  // NG: 構造化されていない
     const product = await createProduct(supabase, input)
     console.log('Product created:', product.id)  // NG: レベル制御できない
-    return created(product)
+    return AppResponse.created(product)
   } catch (error) {
     console.error('Error:', error)  // NG: コンテキストが不足
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```
@@ -44,11 +44,11 @@ export async function POST(request: NextRequest) {
 
     // OK: 操作結果を構造化して記録
     log.info({ operation: 'createProduct', productId: product.id }, 'Product created')
-    return created(product)
+    return AppResponse.created(product)
   } catch (error) {
     // OK: エラーオブジェクトとコンテキストを含む
     log.error({ error, operation: 'createProduct' }, 'Failed to create product')
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```

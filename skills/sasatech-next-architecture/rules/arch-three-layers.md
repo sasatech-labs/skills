@@ -8,7 +8,7 @@ tags: [architecture, layers, handler, service, repository, adapter]
 
 ## ルール
 
-アプリケーションは Handler → Service → Repository / Adapter の層構成を経由する。CSR（API Route経由）では Handler → Service → Repository / Adapter の3層を通過する。SSR（Server Components）では Service → Repository / Adapter を直接呼び出し、Handler層を経由しない。各層の責務を明確に分離し、レイヤーをスキップしない。
+アプリケーションは Handler → Service → Repository / Adapter の層構成を経由する。SSR/CSR問わず、fetcher → API Route → Handler → Service → Repository / Adapter の経路でデータを取得する。各層の責務を明確に分離し、レイヤーをスキップしない。
 
 ## NG例
 
@@ -50,7 +50,7 @@ export const GET = handleGetProducts
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
@@ -58,7 +58,7 @@ import { getProducts } from './service'
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 ```
 
@@ -135,7 +135,7 @@ export const stripeAdapter = {
 1. **責務の明確化**: 各層が単一の責務を持つことで、コードの理解と保守が容易になる
 2. **テスタビリティ**: 各層を独立してテストできる
 3. **変更の局所化**: データソースの変更はRepository層のみ、ビジネスロジックの変更はService層のみに影響
-4. **再利用性**: Serviceは複数のHandlerから呼び出し可能。SSR/CSR両パスから同じService関数を使用する
+4. **再利用性**: Serviceは複数のHandlerから呼び出し可能。SSR/CSR両パスから同じfetcher → API Route → Handler → Serviceの経路を使用する
 
 各層の責務は以下の通り：
 
@@ -166,18 +166,7 @@ export async function getProductById(supabase: SupabaseClient, id: string) {
 
 ### SSR（Server Components）
 
-SSRでもfetcher経由でAPI Routeを呼び出す。データ取得経路はSSR/CSRで統一する。
-
-```typescript
-// app/(auth)/products/[id]/page.tsx
-import { productsFetcher } from '@/features/products'
-
-export default async function ProductPage({ params }: { params: { id: string } }) {
-  // SSRでもfetcher経由でAPI Routeを呼び出す
-  const product = await productsFetcher.getById(params.id)
-  return <ProductDetail product={product} />
-}
-```
+SSRでもfetcher経由でAPI Routeを呼び出す。データ取得経路はSSR/CSRで統一する。詳細は[arch-fetch-strategy](arch-fetch-strategy.md)を参照。
 
 ## 参照
 

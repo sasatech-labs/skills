@@ -8,7 +8,7 @@ tags: [error, exception, service, repository]
 
 ## ルール
 
-Service 層と Repository 層では `AppError` クラスでエラーをスローする。生の `Error` は使用しない。
+Service層、Repository層、Adapter層では`AppError`クラスでエラーをスローする。生の`Error`は使用しない。Adapter層のエラー変換パターンの詳細は[response-adapter-errors](response-adapter-errors.md)を参照。
 
 ## NG例
 
@@ -81,7 +81,7 @@ async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
 2. **エラーコードの欠如**: クライアント側でエラーの種類を識別できず、適切なエラーハンドリングができない
 3. **一貫性の欠如**: エラー処理の実装が各所で異なり、保守性が低下する
 
-`AppError` を使用することで、Service/Repository 層からの HTTP ステータスコードとエラーコードが Handler 層まで伝播し、一貫したエラーレスポンスを実現できる。
+`AppError`を使用することで、Service/Repository/Adapter層からのHTTPステータスコードとエラーコードがHandler層まで伝播し、一貫したエラーレスポンスを実現できる。
 
 ## Handler でのエラーハンドリング
 
@@ -92,7 +92,7 @@ async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { publishPost } from './service'
 
@@ -102,7 +102,7 @@ export const handlePublishPost = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   const post = await publishPost(supabase, id)
-  return ok(post)
+  return AppResponse.ok(post)
 })
 ```
 
@@ -110,7 +110,7 @@ export const handlePublishPost = withHTTPError(async (request, context) => {
 
 ```typescript
 // src/lib/errors.ts
-export class AppError extends Error {
+class _AppError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
@@ -121,25 +121,28 @@ export class AppError extends Error {
   }
 
   static badRequest(message: string, code?: string) {
-    return new AppError(message, 400, code ?? 'BAD_REQUEST')
+    return new _AppError(message, 400, code ?? 'BAD_REQUEST')
   }
 
   static unauthorized(message = 'Unauthorized') {
-    return new AppError(message, 401, 'UNAUTHORIZED')
+    return new _AppError(message, 401, 'UNAUTHORIZED')
   }
 
   static forbidden(message = 'Forbidden') {
-    return new AppError(message, 403, 'FORBIDDEN')
+    return new _AppError(message, 403, 'FORBIDDEN')
   }
 
   static notFound(message = 'Not found') {
-    return new AppError(message, 404, 'NOT_FOUND')
+    return new _AppError(message, 404, 'NOT_FOUND')
   }
 
   static conflict(message: string, code?: string) {
-    return new AppError(message, 409, code ?? 'CONFLICT')
+    return new _AppError(message, 409, code ?? 'CONFLICT')
   }
 }
+
+export type AppError = _AppError
+export const AppError = _AppError
 ```
 
 ## エラーコード一覧
@@ -150,8 +153,8 @@ export class AppError extends Error {
 | `VALIDATION_ERROR` | 400 | バリデーションエラー |
 | `UNAUTHORIZED` | 401 | 未認証 |
 | `FORBIDDEN` | 403 | 権限不足 |
-| `NOT_FOUND` | 404 | リソースなし |
-| `ALREADY_EXISTS` | 409 | 重複 |
+| `NOT_FOUND` | 404 | リソース未検出 |
+| `CONFLICT` | 409 | 重複・競合 |
 | `INTERNAL_ERROR` | 500 | サーバーエラー |
 
 ## 参照

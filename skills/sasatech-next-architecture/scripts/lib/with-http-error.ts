@@ -2,7 +2,7 @@ import 'server-only'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { AppError } from '@/lib/errors'
-import { serverError } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 
 type RouteContext = { params: Promise<Record<string, string>> }
 type HandlerFn = (
@@ -27,7 +27,7 @@ function _withHTTPError(handler: HandlerFn): HandlerFn {
           { status: error.statusCode }
         )
       }
-      return serverError()
+      return AppResponse.serverError()
     }
   }
 }

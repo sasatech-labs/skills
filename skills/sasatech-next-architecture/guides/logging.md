@@ -80,7 +80,7 @@ import { NextRequest } from 'next/server'
 import { logger, createRequestLogger } from '@/lib/logger'
 import { getProducts, createProduct } from './service'
 import { createClient, getUser } from '@/lib/supabase/server'
-import { ok, created, serverError } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { createProductSchema } from './schema'
 
@@ -95,10 +95,10 @@ export async function handleGetProducts(request: NextRequest) {
   try {
     const products = await getProducts(supabase)
     log.info({ layer: 'handler', count: products.length }, 'Request completed')
-    return ok(products)
+    return AppResponse.ok(products)
   } catch (error) {
     log.error({ layer: 'handler', error }, 'Request failed')
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 
@@ -119,10 +119,10 @@ export async function handleCreateProduct(request: NextRequest) {
   try {
     const product = await createProduct(supabase, validation.data, { log })
     log.info({ layer: 'handler', productId: product.id }, 'Product created')
-    return created(product)
+    return AppResponse.created(product)
   } catch (error) {
     log.error({ layer: 'handler', error }, 'Failed to create product')
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```

@@ -188,7 +188,7 @@ FetcherでエラーハンドリングとAPI呼び出しを一元管理し、SWR 
 import { ApiError } from './api-error'
 
 // 単一リソース取得
-export async function fetchData<T>(url: string): Promise<T> {
+async function _fetchData<T>(url: string): Promise<T> {
   const response = await fetch(url)
   const json = await response.json()
 
@@ -204,7 +204,7 @@ export async function fetchData<T>(url: string): Promise<T> {
 }
 
 // ページネーション付きリスト取得
-export async function fetchPaginated<T>(url: string): Promise<PaginatedResponse<T>> {
+async function _fetchPaginated<T>(url: string): Promise<PaginatedResponse<T>> {
   const response = await fetch(url)
   const json = await response.json()
 
@@ -220,7 +220,7 @@ export async function fetchPaginated<T>(url: string): Promise<PaginatedResponse<
 }
 
 // 作成・更新・削除
-export async function mutate<T>(
+async function _mutate<T>(
   url: string,
   options: { method: 'POST' | 'PATCH' | 'DELETE'; body?: unknown }
 ): Promise<T> {
@@ -247,13 +247,17 @@ export async function mutate<T>(
 
   return json.data
 }
+
+export const fetchData = _fetchData
+export const fetchPaginated = _fetchPaginated
+export const mutate = _mutate
 ```
 
 ### ApiErrorクラス
 
 ```typescript
 // src/lib/api-error.ts
-export class ApiError extends Error {
+class _ApiError extends Error {
   constructor(
     message: string,
     public status: number,
@@ -269,6 +273,9 @@ export class ApiError extends Error {
   get isNotFound() { return this.status === 404 }
   get isValidationError() { return this.status === 400 && this.details !== undefined }
 }
+
+export type ApiError = _ApiError
+export const ApiError = _ApiError
 ```
 
 ## 参照

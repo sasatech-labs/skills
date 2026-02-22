@@ -59,7 +59,7 @@ import { AppError } from '@/lib/errors'
 const TABLE_NAME = 'products'
 const MAX_LIMIT = 100  // サーバー側の上限
 
-export const productRepository = {
+const _productRepository = {
   /**
    * 複数の商品を取得
    */
@@ -181,6 +181,8 @@ export const productRepository = {
     return data !== null
   },
 }
+
+export const productRepository = _productRepository
 ```
 
 ### 型定義例
@@ -1712,7 +1714,7 @@ import { AppError } from '@/lib/errors'
 const TABLE_NAME = 'products'
 const MAX_LIMIT = 100
 
-export const productRepository = {
+const _productRepository = {
   async findById(
     supabase: SupabaseClient,
     id: string
@@ -1749,6 +1751,8 @@ export const productRepository = {
     return data
   },
 }
+
+export const productRepository = _productRepository
 ```
 
 **ポイント**:

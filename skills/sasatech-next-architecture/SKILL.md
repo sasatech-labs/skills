@@ -5,16 +5,26 @@ description: Feature-Based Layered Architecture for Next.js (App Router) with Su
 
 # SasaTech Architecture
 
-## What This
+## 概要
 
 Feature-Based Layered Architecture for Next.js (App Router) with Supabase のスキル。
 
 Handler / Service / Repository / Adapter の4レイヤー構成と、機能(Features)単位のモジュール分割パターンを定義する。
 ガイド（設計思想・実装方法）とルール（制約・判定基準）の2種類のドキュメントで構成する。
 
+### ガイドとルール
+
+| 項目 | ガイド | ルール |
+|------|--------|--------|
+| **目的** | アーキテクチャの理解を深める | 実装時の制約を定義する |
+| **内容** | HOW/WHY — 設計思想、実装方法、コード例 | DO/DON'T — 判定基準、NG/OK例 |
+| **形式** | チュートリアル形式 | 構造化されたルール形式 |
+| **使用場面** | 学習時、設計判断時 | 実装時、コードレビュー時 |
+| **配置** | `guides/` | `rules/` |
+
 ## How to Use
 
-このスキルと併せて、以下の外部スキルの導入を推奨します。
+このスキルと併せて、以下の外部スキルの導入を推奨する。
 
 ```bash
 npx skills add https://github.com/supabase/agent-skills --skill supabase-postgres-best-practices
@@ -126,7 +136,7 @@ src/
 
 ### インパクト
 
-Impact は、違反時にアーキテクチャへ与える影響の深刻度で定義します。
+Impact は、違反時にアーキテクチャへ与える影響の深刻度で定義する。
 
 | Impact | 基準 |
 |--------|------|
@@ -148,7 +158,13 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 | [arch-fetch-strategy](rules/arch-fetch-strategy.md) | CRITICAL | SSR/CSR問わず、fetcher経由でAPI Route呼び出し |
 | [arch-logging-levels](rules/arch-logging-levels.md) | MEDIUM | ログレベルをレイヤーと状況に応じて使い分け |
 | [arch-auth-strategy](rules/arch-auth-strategy.md) | HIGH | Handler層で楽観的認証、Service層で厳密な認可。共有ヘルパー関数禁止 |
-| [arch-public-api](rules/arch-public-api.md) | MEDIUM | Feature の index.ts は公開API（Service関数、Fetcher関数、型）のみexport |
+| [arch-public-api](rules/arch-public-api.md) | MEDIUM | Feature の index.ts は公開API（Service関数、Handler関数、Fetcher関数、型）のみexport |
+| [arch-handler-route-separation](rules/arch-handler-route-separation.md) | HIGH | API Routeは薄いエントリーポイントに限定、ロジックはHandler層に分離 |
+| [arch-no-direct-layer-exports](rules/arch-no-direct-layer-exports.md) | HIGH | Repository/Adapterの直接export禁止、Service関数経由で公開 |
+| [arch-adapter-via-service](rules/arch-adapter-via-service.md) | HIGH | Handler層からのAdapter直接呼び出し禁止、Service層経由必須 |
+| [arch-transaction-rpc-required](rules/arch-transaction-rpc-required.md) | HIGH | 複数テーブル更新のトランザクション処理はSupabase RPC関数を使用 |
+| [arch-adapter-placement](rules/arch-adapter-placement.md) | MEDIUM | 汎用Adapterは`lib/adapters/`、Feature固有Adapterは`features/*/core/`に配置 |
+| [arch-feature-adapter-isolation](rules/arch-feature-adapter-isolation.md) | MEDIUM | Feature内Adapterが他Featureの内部Adapterに依存することを禁止 |
 
 ### データ (`data-`)
 
@@ -156,6 +172,10 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 |--------|--------|------|
 | [data-pagination](rules/data-pagination.md) | HIGH | 全件取得禁止、MAX_LIMITでサーバー側上限を強制、ページネーション必須 |
 | [data-comment-required](rules/data-comment-required.md) | LOW | テーブル・カラムに日本語コメント必須 |
+| [data-rls-required](rules/data-rls-required.md) | CRITICAL | 全テーブルでRLS有効化必須、最低1つのポリシーを定義 |
+| [data-migration-cli-required](rules/data-migration-cli-required.md) | MEDIUM | マイグレーションファイルはSupabase CLIで生成、手動作成禁止 |
+| [data-update-trigger-required](rules/data-update-trigger-required.md) | MEDIUM | 全テーブルに`updated_at`/`update_user`自動更新トリガーを適用 |
+| [data-select-minimal](rules/data-select-minimal.md) | MEDIUM | `select('*')`を避け、必要なカラムのみを指定 |
 
 ### サーバーサイド保護 (`server-`)
 
@@ -164,6 +184,7 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 | [server-supabase-via-api](rules/server-supabase-via-api.md) | CRITICAL | クライアントから Supabase 直接使用禁止、API Route 経由必須 |
 | [server-only-directive](rules/server-only-directive.md) | HIGH | Handler/Service/Repository/Adapter に `import 'server-only'` を必須で記述 |
 | [server-no-public-env](rules/server-no-public-env.md) | HIGH | 機密情報（Supabase, API キー）に `NEXT_PUBLIC_` 禁止 |
+| [server-webhook-signature-validation](rules/server-webhook-signature-validation.md) | CRITICAL | Webhook署名検証必須、署名なしでのペイロードパース禁止 |
 
 ### スキーマ・型定義 (`schema-`)
 
@@ -178,7 +199,7 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 |--------|--------|------|
 | [response-with-http-error](rules/response-with-http-error.md) | HIGH | Handler関数は withHTTPError でラップ必須 |
 | [response-apperror](rules/response-apperror.md) | MEDIUM | エラーは `AppError` クラスでスロー、生の Error 禁止 |
-| [response-helpers](rules/response-helpers.md) | LOW | `ok()`, `created()`, `notFound()` 等のヘルパーを使用 |
+| [response-helpers](rules/response-helpers.md) | LOW | `AppResponse.ok()`, `AppResponse.created()` 等のレスポンスヘルパーを使用 |
 | [response-adapter-errors](rules/response-adapter-errors.md) | HIGH | Adapter層は外部APIエラーをAppErrorに変換してスロー |
 
 ### テスト (`test-`)
@@ -194,7 +215,7 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 
 | ルール | Impact | 説明 |
 |--------|--------|------|
-| [validation](rules/validation.md) | MEDIUM | リクエスト入力値（ボディ、パスパラメータ、クエリパラメータ）をZodでバリデーション |
+| [validation-request](rules/validation-request.md) | MEDIUM | リクエスト入力値（ボディ、パスパラメータ、クエリパラメータ）をZodでバリデーション |
 
 ### 命名規則 (`naming-`)
 

@@ -64,14 +64,14 @@ import { productRepository } from './repository'
 import { AppError } from '@/lib/errors'
 
 // 取得系
-export async function getProducts(
+async function _getProducts(
   supabase: SupabaseClient,
   options: { limit?: number; offset?: number } = {}
 ): Promise<Product[]> {
   return productRepository.findMany(supabase, options)
 }
 
-export async function getProduct(
+async function _getProduct(
   supabase: SupabaseClient,
   id: string
 ): Promise<Product> {
@@ -83,7 +83,7 @@ export async function getProduct(
 }
 
 // 作成系
-export async function createProduct(
+async function _createProduct(
   supabase: SupabaseClient,
   input: CreateProductInput
 ): Promise<Product> {
@@ -105,13 +105,13 @@ export async function createProduct(
 }
 
 // 更新系
-export async function updateProduct(
+async function _updateProduct(
   supabase: SupabaseClient,
   id: string,
   input: UpdateProductInput
 ): Promise<Product> {
   // 存在確認
-  await getProduct(supabase, id)
+  await _getProduct(supabase, id)
 
   // ビジネスルール検証
   if (input.price !== undefined && input.price < 0) {
@@ -122,15 +122,21 @@ export async function updateProduct(
 }
 
 // 削除系
-export async function deleteProduct(
+async function _deleteProduct(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
   // 存在確認
-  await getProduct(supabase, id)
+  await _getProduct(supabase, id)
 
   await productRepository.delete(supabase, id)
 }
+
+export const getProducts = _getProducts
+export const getProduct = _getProduct
+export const createProduct = _createProduct
+export const updateProduct = _updateProduct
+export const deleteProduct = _deleteProduct
 ```
 
 ### 公開APIの定義
@@ -173,7 +179,7 @@ import { authRepository } from './repository'
 import { AppError } from '@/lib/errors'
 import bcrypt from 'bcrypt'
 
-export async function signIn(
+async function _signIn(
   supabase: SupabaseClient,
   email: string,
   password: string
@@ -197,6 +203,8 @@ export async function signIn(
     name: user.name,
   }
 }
+
+export const signIn = _signIn
 ```
 
 ### 複雑なビジネスロジック
@@ -215,7 +223,7 @@ import { stripeAdapter } from '@/lib/adapters/stripe'
 import { resendAdapter } from '@/lib/adapters/resend'
 import { AppError } from '@/lib/errors'
 
-export async function createOrder(
+async function _createOrder(
   supabase: SupabaseClient,
   input: CreateOrderInput
 ): Promise<{ order: Order; clientSecret: string }> {
@@ -271,6 +279,8 @@ export async function createOrder(
     clientSecret: paymentIntent.clientSecret,
   }
 }
+
+export const createOrder = _createOrder
 ```
 
 ### 条件分岐を含むビジネスロジック
@@ -285,7 +295,7 @@ import { subscriptionRepository } from './repository'
 import { stripeAdapter } from '@/lib/adapters/stripe'
 import { AppError } from '@/lib/errors'
 
-export async function createSubscription(
+async function _createSubscription(
   supabase: SupabaseClient,
   userId: string,
   input: CreateSubscriptionInput
@@ -321,6 +331,8 @@ export async function createSubscription(
   })
 }
 
+export const createSubscription = _createSubscription
+
 async function upgradeSubscription(
   supabase: SupabaseClient,
   userId: string,
@@ -351,7 +363,7 @@ import type { AnalyticsSummary } from './schema'
 import { orderRepository } from '@/features/orders/core/repository'
 import { userRepository } from '@/features/users/repository'
 
-export async function getAnalyticsSummary(
+async function _getAnalyticsSummary(
   supabase: SupabaseClient,
   startDate: Date,
   endDate: Date
@@ -393,6 +405,8 @@ export async function getAnalyticsSummary(
     },
   }
 }
+
+export const getAnalyticsSummary = _getAnalyticsSummary
 ```
 
 ## Repository/Adapterの使用方法
@@ -410,7 +424,7 @@ import { productRepository } from './repository'
 import { categoryRepository } from '@/features/categories/repository'
 import { AppError } from '@/lib/errors'
 
-export async function getProductsWithCategory(
+async function _getProductsWithCategory(
   supabase: SupabaseClient,
   categoryId: string
 ) {
@@ -432,7 +446,7 @@ export async function getProductsWithCategory(
   }
 }
 
-export async function moveProductToCategory(
+async function _moveProductToCategory(
   supabase: SupabaseClient,
   productId: string,
   newCategoryId: string
@@ -455,6 +469,9 @@ export async function moveProductToCategory(
     categoryId: newCategoryId,
   })
 }
+
+export const getProductsWithCategory = _getProductsWithCategory
+export const moveProductToCategory = _moveProductToCategory
 ```
 
 ### Adapterの使用
@@ -472,7 +489,7 @@ import { stripeAdapter } from '@/lib/adapters/stripe'
 import { resendAdapter } from '@/lib/adapters/resend'
 import { AppError } from '@/lib/errors'
 
-export async function processPayment(
+async function _processPayment(
   supabase: SupabaseClient,
   orderId: string,
   paymentMethodId: string
@@ -530,6 +547,8 @@ export async function processPayment(
     throw error
   }
 }
+
+export const processPayment = _processPayment
 ```
 
 ### 複数Adapterの組み合わせ
@@ -545,7 +564,7 @@ import { resendAdapter } from '@/lib/adapters/resend'
 import { r2Adapter } from '@/lib/adapters/r2'
 import { generateInvoicePDF } from './pdf-generator'
 
-export async function createAndSendInvoice(
+async function _createAndSendInvoice(
   supabase: SupabaseClient,
   orderId: string
 ) {
@@ -593,6 +612,8 @@ function generateInvoiceNumber(): string {
   const random = Math.random().toString(36).substring(2, 8).toUpperCase()
   return `INV-${year}${month}-${random}`
 }
+
+export const createAndSendInvoice = _createAndSendInvoice
 ```
 
 ## 認可チェック
@@ -614,7 +635,7 @@ import type { Post, UpdatePostInput } from './schema'
 import { AppError } from '@/lib/errors'
 import { postRepository } from './repository'
 
-export async function updatePost(
+async function _updatePost(
   supabase: SupabaseClient,
   userId: string,
   postId: string,
@@ -629,6 +650,8 @@ export async function updatePost(
 
   return postRepository.update(supabase, postId, input)
 }
+
+export const updatePost = _updatePost
 ```
 
 ### ロールチェック
@@ -644,7 +667,7 @@ import { AppError } from '@/lib/errors'
 import { userRepository } from '@/features/users/core/repository'
 import { analyticsRepository } from './repository'
 
-export async function getAdminDashboard(
+async function _getAdminDashboard(
   supabase: SupabaseClient,
   userId: string
 ) {
@@ -656,6 +679,8 @@ export async function getAdminDashboard(
 
   return analyticsRepository.getDashboard(supabase)
 }
+
+export const getAdminDashboard = _getAdminDashboard
 ```
 
 ### 認可パターンの選択
@@ -694,7 +719,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { productRepository } from './repository'
 import { AppError } from '@/lib/errors'
 
-export async function getProduct(
+async function _getProduct(
   supabase: SupabaseClient,
   id: string
 ) {
@@ -707,7 +732,7 @@ export async function getProduct(
   return product
 }
 
-export async function createProduct(
+async function _createProduct(
   supabase: SupabaseClient,
   input: CreateProductInput
 ) {
@@ -732,6 +757,9 @@ export async function createProduct(
 
   return productRepository.create(supabase, input)
 }
+
+export const getProduct = _getProduct
+export const createProduct = _createProduct
 ```
 
 ### Adapterエラーの処理
@@ -746,7 +774,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { stripeAdapter } from '@/lib/adapters/stripe'
 import { AppError } from '@/lib/errors'
 
-export async function createPaymentIntent(
+async function _createPaymentIntent(
   supabase: SupabaseClient,
   amount: number
 ) {
@@ -768,6 +796,8 @@ export async function createPaymentIntent(
     throw new AppError('Payment creation failed', 500)
   }
 }
+
+export const createPaymentIntent = _createPaymentIntent
 ```
 
 ### 複数操作のエラーハンドリング
@@ -783,7 +813,7 @@ import { stripeAdapter } from '@/lib/adapters/stripe'
 import { resendAdapter } from '@/lib/adapters/resend'
 import { AppError } from '@/lib/errors'
 
-export async function createOrder(
+async function _createOrder(
   supabase: SupabaseClient,
   input: CreateOrderInput
 ) {
@@ -822,7 +852,7 @@ export async function createOrder(
       console.error('Failed to send order confirmation email:', emailError)
     }
 
-  
+
     return {
       order,
       clientSecret: paymentIntent.clientSecret,
@@ -840,6 +870,8 @@ export async function createOrder(
     throw error
   }
 }
+
+export const createOrder = _createOrder
 ```
 
 ## トランザクション処理
@@ -857,7 +889,7 @@ import { accountRepository } from '@/features/accounts/repository'
 import { transactionRepository } from './repository'
 import { AppError } from '@/lib/errors'
 
-export async function transferMoney(
+async function _transferMoney(
   supabase: SupabaseClient,
   fromAccountId: string,
   toAccountId: string,
@@ -885,6 +917,8 @@ export async function transferMoney(
 
   return data
 }
+
+export const transferMoney = _transferMoney
 ```
 
 ### トランザクション用のRPC関数（SQL）
@@ -957,7 +991,7 @@ import { paymentRepository } from '@/features/payments/repository'
 import { stripeAdapter } from '@/lib/adapters/stripe'
 import { AppError } from '@/lib/errors'
 
-export async function createReservation(
+async function _createReservation(
   supabase: SupabaseClient,
   input: CreateReservationInput
 ) {
@@ -1022,6 +1056,8 @@ export async function createReservation(
     throw error
   }
 }
+
+export const createReservation = _createReservation
 ```
 
 ## ベストプラクティス
@@ -1283,14 +1319,14 @@ import type { Product, CreateProductInput } from './schema'
 import { productRepository } from './repository'
 import { AppError } from '@/lib/errors'
 
-export async function getProducts(
+async function _getProducts(
   supabase: SupabaseClient,
   options: { limit?: number; offset?: number } = {}
 ): Promise<Product[]> {
   return productRepository.findMany(supabase, options)
 }
 
-export async function createProduct(
+async function _createProduct(
   supabase: SupabaseClient,
   input: CreateProductInput
 ): Promise<Product> {
@@ -1310,6 +1346,9 @@ export async function createProduct(
     description: input.description ?? '',
   })
 }
+
+export const getProducts = _getProducts
+export const createProduct = _createProduct
 ```
 
 **ポイント**:
@@ -1331,7 +1370,7 @@ import { stripeAdapter } from '@/lib/adapters/stripe'
 import { resendAdapter } from '@/lib/adapters/resend'
 import { AppError } from '@/lib/errors'
 
-export async function createOrder(
+async function _createOrder(
   supabase: SupabaseClient,
   input: CreateOrderInput
 ): Promise<{ order: Order; clientSecret: string }> {
@@ -1381,6 +1420,8 @@ export async function createOrder(
     clientSecret: paymentIntent.clientSecret,
   }
 }
+
+export const createOrder = _createOrder
 ```
 
 **ポイント**:
@@ -1398,7 +1439,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { accountRepository } from '@/features/accounts/repository'
 import { AppError } from '@/lib/errors'
 
-export async function transferMoney(
+async function _transferMoney(
   supabase: SupabaseClient,
   fromAccountId: string,
   toAccountId: string,
@@ -1426,6 +1467,8 @@ export async function transferMoney(
 
   return data
 }
+
+export const transferMoney = _transferMoney
 ```
 
 **ポイント**:
@@ -1448,8 +1491,8 @@ export async function POST(request: NextRequest) {
     .select()
     .single()
 
-  if (error) return serverError()
-  return created(data)
+  if (error) return AppResponse.serverError()
+  return AppResponse.created(data)
 }
 
 // ✅ 推奨（Service層を経由）
@@ -1460,9 +1503,9 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const product = await createProduct(supabase, validation.data)
-    return created(product)
+    return AppResponse.created(product)
   } catch (error) {
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```

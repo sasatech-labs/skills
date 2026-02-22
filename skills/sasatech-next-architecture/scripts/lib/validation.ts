@@ -1,5 +1,5 @@
 import { ZodError, ZodSchema } from 'zod'
-import { badRequest } from './api-response'
+import { AppResponse } from './api-response'
 
 type _ValidationResult<T> =
   | { success: true; data: T }
@@ -33,12 +33,12 @@ async function _validateBody<T>(
       }))
       return {
         success: false,
-        response: badRequest('Validation failed', 'VALIDATION_ERROR', details),
+        response: AppResponse.badRequest('Validation failed', 'VALIDATION_ERROR', details),
       }
     }
     return {
       success: false,
-      response: badRequest('Invalid JSON'),
+      response: AppResponse.badRequest('Invalid JSON'),
     }
   }
 }
@@ -73,12 +73,12 @@ function _validateParams<T>(
       }))
       return {
         success: false,
-        response: badRequest('Invalid parameters', 'VALIDATION_ERROR', details),
+        response: AppResponse.badRequest('Invalid parameters', 'VALIDATION_ERROR', details),
       }
     }
     return {
       success: false,
-      response: badRequest('Invalid parameters'),
+      response: AppResponse.badRequest('Invalid parameters'),
     }
   }
 }
@@ -112,12 +112,12 @@ function _validateQuery<T>(
       }))
       return {
         success: false,
-        response: badRequest('Invalid query parameters', 'VALIDATION_ERROR', details),
+        response: AppResponse.badRequest('Invalid query parameters', 'VALIDATION_ERROR', details),
       }
     }
     return {
       success: false,
-      response: badRequest('Invalid query parameters'),
+      response: AppResponse.badRequest('Invalid query parameters'),
     }
   }
 }

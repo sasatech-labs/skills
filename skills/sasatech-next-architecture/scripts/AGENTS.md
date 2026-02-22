@@ -133,7 +133,7 @@ export const productRepository = {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok, created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
@@ -142,7 +142,7 @@ import { getProducts, createProduct } from './service'
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 
 export const handleCreateProduct = withHTTPError(async (request) => {
@@ -151,7 +151,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
 ```
 
@@ -190,14 +190,14 @@ export const POST = handleCreateProduct
 ## レスポンスヘルパー
 
 ```typescript
-ok(data)           // 200
-created(data)      // 201
-noContent()        // 204
-badRequest(msg)    // 400
-unauthorized()     // 401
-forbidden()        // 403
-notFound(msg)      // 404
-serverError()      // 500
+AppResponse.ok(data)           // 200
+AppResponse.created(data)      // 201
+AppResponse.noContent()        // 204
+AppResponse.badRequest(msg)    // 400
+AppResponse.unauthorized()     // 401
+AppResponse.forbidden()        // 403
+AppResponse.notFound(msg)      // 404
+AppResponse.serverError()      // 500
 ```
 
 ## エラーハンドリング

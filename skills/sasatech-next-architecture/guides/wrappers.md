@@ -22,7 +22,7 @@ import 'server-only'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { AppError } from '@/lib/errors'
-import { serverError } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 
 type RouteContext = { params: Promise<Record<string, string>> }
 type HandlerFn = (
@@ -30,7 +30,7 @@ type HandlerFn = (
   context: RouteContext
 ) => Promise<NextResponse>
 
-export function withHTTPError(handler: HandlerFn): HandlerFn {
+function _withHTTPError(handler: HandlerFn): HandlerFn {
   return async (request, context) => {
     try {
       return await handler(request, context)
@@ -41,10 +41,12 @@ export function withHTTPError(handler: HandlerFn): HandlerFn {
           { status: error.statusCode }
         )
       }
-      return serverError()
+      return AppResponse.serverError()
     }
   }
 }
+
+export const withHTTPError = _withHTTPError
 ```
 
 ### 使用パターン
@@ -56,14 +58,14 @@ export function withHTTPError(handler: HandlerFn): HandlerFn {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 ```
 
@@ -74,7 +76,7 @@ export const handleGetProducts = withHTTPError(async (request) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProduct } from './service'
 
@@ -82,7 +84,7 @@ export const handleGetProduct = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   const product = await getProduct(supabase, id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 ```
 
@@ -93,7 +95,7 @@ export const handleGetProduct = withHTTPError(async (request, context) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
@@ -107,7 +109,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
 ```
 
@@ -118,7 +120,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getMyProfile } from './service'
@@ -133,7 +135,7 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
   }
 
   const profile = await getMyProfile(supabase, session.user.id)
-  return ok(profile)
+  return AppResponse.ok(profile)
 })
 ```
 
@@ -149,7 +151,7 @@ export async function handleGetProducts(request: NextRequest) {
   try {
     const supabase = await createClient()
     const products = await getProducts(supabase)
-    return ok(products)
+    return AppResponse.ok(products)
   } catch (error) {
     return handleApiError(error)
   }
@@ -161,7 +163,7 @@ import { withHTTPError } from '@/lib/with-http-error'
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 ```
 
@@ -228,7 +230,7 @@ export async function deleteProduct(
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok, created, noContent } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema, updateProductSchema } from './schema'
@@ -243,14 +245,14 @@ import {
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 
 export const handleGetProduct = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   const product = await getProduct(supabase, id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 
 export const handleCreateProduct = withHTTPError(async (request) => {
@@ -261,7 +263,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
 
 export const handleUpdateProduct = withHTTPError(async (request, context) => {
@@ -273,14 +275,14 @@ export const handleUpdateProduct = withHTTPError(async (request, context) => {
 
   const supabase = await createClient()
   const product = await updateProduct(supabase, id, validation.data)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 
 export const handleDeleteProduct = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   await deleteProduct(supabase, id)
-  return noContent()
+  return AppResponse.noContent()
 })
 ```
 

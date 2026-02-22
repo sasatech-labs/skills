@@ -88,15 +88,17 @@ Handler層は`features/[feature]/core/handler.ts`で実装する。すべてのH
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
-export const handleGetProducts = withHTTPError(async (request) => {
+const _handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
+
+export const handleGetProducts = _handleGetProducts
 ```
 
 #### POSTハンドラー（バリデーション付き）
@@ -106,13 +108,13 @@ export const handleGetProducts = withHTTPError(async (request) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
 import { createProduct } from './service'
 
-export const handleCreateProduct = withHTTPError(async (request) => {
+const _handleCreateProduct = withHTTPError(async (request) => {
   // 1. バリデーション
   const validation = await validateBody(request, createProductSchema)
   if (!validation.success) {
@@ -122,8 +124,10 @@ export const handleCreateProduct = withHTTPError(async (request) => {
   // 2. ビジネスロジック実行
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
+
+export const handleCreateProduct = _handleCreateProduct
 ```
 
 #### パラメータ付きハンドラー（GET/PATCH/DELETE）
@@ -133,20 +137,20 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok, noContent } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { updateProductSchema } from './schema'
 import { getProduct, updateProduct, deleteProduct } from './service'
 
-export const handleGetProduct = withHTTPError(async (request, context) => {
+const _handleGetProduct = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   const product = await getProduct(supabase, id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 
-export const handleUpdateProduct = withHTTPError(async (request, context) => {
+const _handleUpdateProduct = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const validation = await validateBody(request, updateProductSchema)
   if (!validation.success) {
@@ -155,20 +159,24 @@ export const handleUpdateProduct = withHTTPError(async (request, context) => {
 
   const supabase = await createClient()
   const product = await updateProduct(supabase, id, validation.data)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 
-export const handleDeleteProduct = withHTTPError(async (request, context) => {
+const _handleDeleteProduct = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   await deleteProduct(supabase, id)
-  return noContent()
+  return AppResponse.noContent()
 })
+
+export const handleGetProduct = _handleGetProduct
+export const handleUpdateProduct = _handleUpdateProduct
+export const handleDeleteProduct = _handleDeleteProduct
 ```
 
 ## バリデーション
 
-入力バリデーションはHandler層の重要な責務です。Zodを使用して型安全なバリデーションを実装します。
+入力バリデーションはHandler層の重要な責務である。Zodを使用して型安全なバリデーションを実装する。
 
 ### Zodスキーマの定義
 
@@ -202,7 +210,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok, badRequest } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProduct } from './service'
 
@@ -210,19 +218,21 @@ const paramsSchema = z.object({
   id: z.string().uuid('Invalid product ID format'),
 })
 
-export const handleGetProduct = withHTTPError(async (request, context) => {
+const _handleGetProduct = withHTTPError(async (request, context) => {
   const params = await context.params
 
   // パラメータを検証
   const result = paramsSchema.safeParse(params)
   if (!result.success) {
-    return badRequest(result.error.format())
+    return AppResponse.badRequest(result.error.format())
   }
 
   const supabase = await createClient()
   const product = await getProduct(supabase, result.data.id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
+
+export const handleGetProduct = _handleGetProduct
 ```
 
 ### 複雑なバリデーション例
@@ -269,13 +279,13 @@ export const createOrderSchema = z.object({
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createOrderSchema } from './schema'
 import { createOrder } from './service'
 
-export const handleCreateOrder = withHTTPError(async (request) => {
+const _handleCreateOrder = withHTTPError(async (request) => {
   const validation = await validateBody(request, createOrderSchema)
   if (!validation.success) {
     return validation.response
@@ -284,8 +294,10 @@ export const handleCreateOrder = withHTTPError(async (request) => {
   // バリデーション済みのデータを使用
   const supabase = await createClient()
   const order = await createOrder(supabase, validation.data)
-  return created(order)
+  return AppResponse.created(order)
 })
+
+export const handleCreateOrder = _handleCreateOrder
 ```
 
 ### バリデーションヘルパーの実装
@@ -296,7 +308,7 @@ import 'server-only'
 
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
-import { badRequest } from './api-response'
+import { AppResponse } from './api-response'
 
 type ValidationResult<T> =
   | { success: true; data: T }
@@ -315,12 +327,12 @@ export async function validateBody<T>(
       const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return {
         success: false,
-        response: badRequest(message)
+        response: AppResponse.badRequest(message)
       }
     }
     return {
       success: false,
-      response: badRequest('Invalid request body')
+      response: AppResponse.badRequest('Invalid request body')
     }
   }
 }
@@ -338,12 +350,12 @@ export function validateSearchParams<T>(
       const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return {
         success: false,
-        response: badRequest(message)
+        response: AppResponse.badRequest(message)
       }
     }
     return {
       success: false,
-      response: badRequest('Invalid query parameters')
+      response: AppResponse.badRequest('Invalid query parameters')
     }
   }
 }
@@ -357,7 +369,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateSearchParams } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
@@ -368,7 +380,7 @@ const querySchema = z.object({
   categoryId: z.string().uuid().optional(),
 })
 
-export const handleGetProducts = withHTTPError(async (request) => {
+const _handleGetProducts = withHTTPError(async (request) => {
   // クエリパラメータのバリデーション
   const validation = validateSearchParams(request, querySchema)
   if (!validation.success) {
@@ -377,8 +389,10 @@ export const handleGetProducts = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const products = await getProducts(supabase, validation.data)
-  return ok(products)
+  return AppResponse.ok(products)
 })
+
+export const handleGetProducts = _handleGetProducts
 ```
 
 ## 楽観的認証チェック
@@ -394,12 +408,12 @@ Handler層は楽観的認証を担当する。`supabase.auth.getSession()`でセ
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getMyProfile } from './service'
 
-export const handleGetMyProfile = withHTTPError(async (request) => {
+const _handleGetMyProfile = withHTTPError(async (request) => {
   const supabase = await createClient()
 
   // 楽観的認証: セッション存在チェック
@@ -410,8 +424,10 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
 
   // Service層に認証済みユーザーIDを渡す
   const profile = await getMyProfile(supabase, session.user.id)
-  return ok(profile)
+  return AppResponse.ok(profile)
 })
+
+export const handleGetMyProfile = _handleGetMyProfile
 ```
 
 ### バリデーション + 認証
@@ -421,14 +437,14 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { updatePostSchema } from './schema'
 import { updatePost } from './service'
 
-export const handleUpdatePost = withHTTPError(async (request, context) => {
+const _handleUpdatePost = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const validation = await validateBody(request, updatePostSchema)
   if (!validation.success) {
@@ -445,8 +461,10 @@ export const handleUpdatePost = withHTTPError(async (request, context) => {
 
   // Service層に認証済みユーザーIDを渡す（所有権チェックはService層で行う）
   const post = await updatePost(supabase, session.user.id, id, validation.data)
-  return ok(post)
+  return AppResponse.ok(post)
 })
+
+export const handleUpdatePost = _handleUpdatePost
 ```
 
 ### 認可はService層で行う
@@ -458,14 +476,14 @@ export const handleUpdatePost = withHTTPError(async (request, context) => {
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getAdminDashboard } from './service'
 
 // Handler層: セッション確認のみ
 // ロールチェックはService層（getAdminDashboard内）で行う
-export const handleGetAdminDashboard = withHTTPError(async (request) => {
+const _handleGetAdminDashboard = withHTTPError(async (request) => {
   const supabase = await createClient()
 
   const { data: { session } } = await supabase.auth.getSession()
@@ -474,8 +492,10 @@ export const handleGetAdminDashboard = withHTTPError(async (request) => {
   }
 
   const dashboard = await getAdminDashboard(supabase, session.user.id)
-  return ok(dashboard)
+  return AppResponse.ok(dashboard)
 })
+
+export const handleGetAdminDashboard = _handleGetAdminDashboard
 ```
 
 ## エラーハンドリング
@@ -490,77 +510,79 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 
-export function ok<T>(data: T) {
-  return NextResponse.json({ data }, { status: 200 })
-}
+export class AppResponse {
+  static ok<T>(data: T) {
+    return NextResponse.json({ data }, { status: 200 })
+  }
 
-export function created<T>(data: T) {
-  return NextResponse.json({ data }, { status: 201 })
-}
+  static created<T>(data: T) {
+    return NextResponse.json({ data }, { status: 201 })
+  }
 
-export function noContent() {
-  return new NextResponse(null, { status: 204 })
-}
+  static noContent() {
+    return new NextResponse(null, { status: 204 })
+  }
 
-export function badRequest(
-  message: string = 'Bad request',
-  errorCode: string = 'BAD_REQUEST',
-  details?: Array<{ field: string; message: string }>
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message, ...(details && { details }) } },
-    { status: 400 }
-  )
-}
+  static badRequest(
+    message: string = 'Bad request',
+    errorCode: string = 'BAD_REQUEST',
+    details?: Array<{ field: string; message: string }>
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message, ...(details && { details }) } },
+      { status: 400 }
+    )
+  }
 
-export function unauthorized(
-  message: string = 'Unauthorized',
-  errorCode: string = 'UNAUTHORIZED'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 401 }
-  )
-}
+  static unauthorized(
+    message: string = 'Unauthorized',
+    errorCode: string = 'UNAUTHORIZED'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 401 }
+    )
+  }
 
-export function forbidden(
-  message: string = 'Forbidden',
-  errorCode: string = 'FORBIDDEN'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 403 }
-  )
-}
+  static forbidden(
+    message: string = 'Forbidden',
+    errorCode: string = 'FORBIDDEN'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 403 }
+    )
+  }
 
-export function notFound(
-  message: string = 'Not found',
-  errorCode: string = 'NOT_FOUND'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 404 }
-  )
-}
+  static notFound(
+    message: string = 'Not found',
+    errorCode: string = 'NOT_FOUND'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 404 }
+    )
+  }
 
-export function conflict(
-  message: string = 'Conflict',
-  errorCode: string = 'CONFLICT'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 409 }
-  )
-}
+  static conflict(
+    message: string = 'Conflict',
+    errorCode: string = 'CONFLICT'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 409 }
+    )
+  }
 
-export function serverError(
-  message: string = 'Internal server error',
-  errorCode: string = 'INTERNAL_ERROR'
-) {
-  return NextResponse.json(
-    { error: { error_code: errorCode, message } },
-    { status: 500 }
-  )
+  static serverError(
+    message: string = 'Internal server error',
+    errorCode: string = 'INTERNAL_ERROR'
+  ) {
+    return NextResponse.json(
+      { error: { error_code: errorCode, message } },
+      { status: 500 }
+    )
+  }
 }
 ```
 
@@ -574,7 +596,7 @@ import 'server-only'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { AppError } from '@/lib/errors'
-import { serverError } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 
 type RouteContext = { params: Promise<Record<string, string>> }
 type HandlerFn = (
@@ -593,7 +615,7 @@ export function withHTTPError(handler: HandlerFn): HandlerFn {
           { status: error.statusCode }
         )
       }
-      return serverError()
+      return AppResponse.serverError()
     }
   }
 }
@@ -606,13 +628,13 @@ Handler関数はwithHTTPErrorでラップし、正常系のみを記述する。
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
 import { createProduct } from './service'
 
-export const handleCreateProduct = withHTTPError(async (request) => {
+const _handleCreateProduct = withHTTPError(async (request) => {
   const validation = await validateBody(request, createProductSchema)
   if (!validation.success) {
     return validation.response
@@ -620,8 +642,10 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
+
+export const handleCreateProduct = _handleCreateProduct
 ```
 
 ```typescript
@@ -644,22 +668,22 @@ Next.jsのファイルベースルーティングを活用して、RESTful API�
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok, created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createReviewSchema } from './schema'
 import { getReviews, createReview } from './service'
 
 // GET /api/products/[id]/reviews - レビュー一覧
-export const handleGetReviews = withHTTPError(async (request, context) => {
+const _handleGetReviews = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   const reviews = await getReviews(supabase, id)
-  return ok(reviews)
+  return AppResponse.ok(reviews)
 })
 
 // POST /api/products/[id]/reviews - レビュー作成
-export const handleCreateReview = withHTTPError(async (request, context) => {
+const _handleCreateReview = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const validation = await validateBody(request, createReviewSchema)
   if (!validation.success) {
@@ -671,8 +695,11 @@ export const handleCreateReview = withHTTPError(async (request, context) => {
     productId: id,
     ...validation.data,
   })
-  return created(review)
+  return AppResponse.created(review)
 })
+
+export const handleGetReviews = _handleGetReviews
+export const handleCreateReview = _handleCreateReview
 ```
 
 ```typescript
@@ -690,23 +717,23 @@ export const POST = handleCreateReview
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok, noContent } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { updateReviewSchema } from './schema'
 import { getReview, updateReview, deleteReview } from './service'
 
 // GET /api/products/[id]/reviews/[reviewId]
-export const handleGetReview = withHTTPError(async (request, context) => {
+const _handleGetReview = withHTTPError(async (request, context) => {
   const { reviewId } = await context.params
   const supabase = await createClient()
   const review = await getReview(supabase, reviewId)
-  return ok(review)
+  return AppResponse.ok(review)
 })
 
 // PATCH /api/products/[id]/reviews/[reviewId]
 // 認証・所有権チェックはService層で行う
-export const handleUpdateReview = withHTTPError(async (request, context) => {
+const _handleUpdateReview = withHTTPError(async (request, context) => {
   const { reviewId } = await context.params
   const validation = await validateBody(request, updateReviewSchema)
   if (!validation.success) {
@@ -715,16 +742,20 @@ export const handleUpdateReview = withHTTPError(async (request, context) => {
 
   const supabase = await createClient()
   const updated = await updateReview(supabase, reviewId, validation.data)
-  return ok(updated)
+  return AppResponse.ok(updated)
 })
 
 // DELETE /api/products/[id]/reviews/[reviewId]
-export const handleDeleteReview = withHTTPError(async (request, context) => {
+const _handleDeleteReview = withHTTPError(async (request, context) => {
   const { reviewId } = await context.params
   const supabase = await createClient()
   await deleteReview(supabase, reviewId)
-  return noContent()
+  return AppResponse.noContent()
 })
+
+export const handleGetReview = _handleGetReview
+export const handleUpdateReview = _handleUpdateReview
+export const handleDeleteReview = _handleDeleteReview
 ```
 
 ```typescript
@@ -747,7 +778,7 @@ export const DELETE = handleDeleteReview
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok, created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { addOrderItemSchema } from './schema'
@@ -755,15 +786,15 @@ import { getOrderItems, addOrderItem } from './service'
 
 // GET /api/users/[userId]/orders/[orderId]/items
 // 認証・所有権チェックはService層で行う
-export const handleGetOrderItems = withHTTPError(async (request, context) => {
+const _handleGetOrderItems = withHTTPError(async (request, context) => {
   const { userId, orderId } = await context.params
   const supabase = await createClient()
   const items = await getOrderItems(supabase, userId, orderId)
-  return ok(items)
+  return AppResponse.ok(items)
 })
 
 // POST /api/users/[userId]/orders/[orderId]/items
-export const handleAddOrderItem = withHTTPError(async (request, context) => {
+const _handleAddOrderItem = withHTTPError(async (request, context) => {
   const { userId, orderId } = await context.params
   const validation = await validateBody(request, addOrderItemSchema)
   if (!validation.success) {
@@ -775,8 +806,11 @@ export const handleAddOrderItem = withHTTPError(async (request, context) => {
     ...validation.data,
     orderId,
   })
-  return created(item)
+  return AppResponse.created(item)
 })
+
+export const handleGetOrderItems = _handleGetOrderItems
+export const handleAddOrderItem = _handleAddOrderItem
 ```
 
 ```typescript
@@ -799,7 +833,7 @@ import { NextRequest } from 'next/server'
 // ...
 ```
 
-サーバー専用コードがクライアントバンドルに含まれないことを保証します。セキュリティとバンドルサイズの観点から必須の設定です。
+サーバー専用コードがクライアントバンドルに含まれないことを保証する。セキュリティとバンドルサイズの観点から必須の設定である。
 
 ### 2. 標準化されたレスポンス形式
 
@@ -822,7 +856,7 @@ import { NextRequest } from 'next/server'
 }
 ```
 
-一貫性のあるレスポンス形式により、フロントエンドでの処理が簡素化されます。
+一貫性のあるレスポンス形式により、フロントエンドでの処理が簡素化される。
 
 ### 3. 早期リターンパターン
 
@@ -838,7 +872,7 @@ export const handleCreateResource = withHTTPError(async (request) => {
   // 2. 正常系の処理(認証・ビジネスロジックはService層)
   const supabase = await createClient()
   const result = await createResource(supabase, validation.data)
-  return created(result)
+  return AppResponse.created(result)
 })
 ```
 
@@ -863,7 +897,7 @@ export const handleCreateResource = withHTTPError(async (request) => {
 export const handleGetPublicData = withHTTPError(async (request) => {
   const supabase = await createClient()
   const data = await getPublicData(supabase)
-  return ok(data)
+  return AppResponse.ok(data)
 })
 
 // 認証必須: getSessionでセッション存在を確認
@@ -876,7 +910,7 @@ export const handleCreatePrivateData = withHTTPError(async (request) => {
   }
 
   const data = await createPrivateData(supabase, session.user.id)
-  return created(data)
+  return AppResponse.created(data)
 })
 ```
 
@@ -923,7 +957,7 @@ export const handleGetProducts = withHTTPError(async (request) => {
     getProducts(supabase),
     5000  // 5秒でタイムアウト
   )
-  return ok(products)
+  return AppResponse.ok(products)
 })
 ```
 
@@ -980,7 +1014,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const result = await createProduct(supabase, validation.data)  // Service層
-  return created(result)
+  return AppResponse.created(result)
 })
 
 // ❌ 悪い例（Handler層にビジネスロジックが含まれている）
@@ -1002,7 +1036,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
     .single()
 
   if (error) throw error
-  return created(data)
+  return AppResponse.created(data)
 })
 ```
 
@@ -1017,15 +1051,17 @@ Handler層の実装例を以下に示す。
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
 
-export const handleGetProducts = withHTTPError(async (request) => {
+const _handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
+
+export const handleGetProducts = _handleGetProducts
 ```
 
 ```typescript
@@ -1049,13 +1085,13 @@ export const GET = handleGetProducts
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { created } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateBody } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { createProductSchema } from './schema'
 import { createProduct } from './service'
 
-export const handleCreateProduct = withHTTPError(async (request) => {
+const _handleCreateProduct = withHTTPError(async (request) => {
   // 1. バリデーション
   const validation = await validateBody(request, createProductSchema)
   if (!validation.success) {
@@ -1065,8 +1101,10 @@ export const handleCreateProduct = withHTTPError(async (request) => {
   // 2. ビジネスロジック実行
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
+
+export const handleCreateProduct = _handleCreateProduct
 ```
 
 ```typescript
@@ -1088,12 +1126,12 @@ export const POST = handleCreateProduct
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { AppError } from '@/lib/errors'
 import { getMyProfile } from './service'
 
-export const handleGetMyProfile = withHTTPError(async (request) => {
+const _handleGetMyProfile = withHTTPError(async (request) => {
   const supabase = await createClient()
 
   // 楽観的認証: セッション存在チェック
@@ -1103,8 +1141,10 @@ export const handleGetMyProfile = withHTTPError(async (request) => {
   }
 
   const profile = await getMyProfile(supabase, session.user.id)
-  return ok(profile)
+  return AppResponse.ok(profile)
 })
+
+export const handleGetMyProfile = _handleGetMyProfile
 ```
 
 ```typescript
@@ -1127,7 +1167,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok, badRequest } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProduct } from './service'
 
@@ -1135,19 +1175,21 @@ const paramsSchema = z.object({
   id: z.string().uuid('Invalid product ID format'),
 })
 
-export const handleGetProduct = withHTTPError(async (request, context) => {
+const _handleGetProduct = withHTTPError(async (request, context) => {
   const params = await context.params
 
   // パラメータを検証
   const result = paramsSchema.safeParse(params)
   if (!result.success) {
-    return badRequest(result.error.format())
+    return AppResponse.badRequest(result.error.format())
   }
 
   const supabase = await createClient()
   const product = await getProduct(supabase, result.data.id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
+
+export const handleGetProduct = _handleGetProduct
 ```
 
 ```typescript
@@ -1221,7 +1263,7 @@ export const handleCreateResource = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const result = await createResource(supabase, validation.data)
-  return created(result)
+  return AppResponse.created(result)
 })
 
 // ❌ 避けるべき（ネストが深い、手動try-catch）
@@ -1231,9 +1273,9 @@ export async function handleCreateResource(request: NextRequest) {
     try {
       const supabase = await createClient()
       const result = await createResource(supabase, validation.data)
-      return created(result)
+      return AppResponse.created(result)
     } catch (error) {
-      return serverError()
+      return AppResponse.serverError()
     }
   } else {
     return validation.response
@@ -1254,7 +1296,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const result = await createProduct(supabase, validation.data) // Service層
-  return created(result)
+  return AppResponse.created(result)
 })
 
 // ❌ 避けるべき（Handler層にビジネスロジックが含まれている）
@@ -1276,7 +1318,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
     .single()
 
   if (error) throw error
-  return created(data)
+  return AppResponse.created(data)
 })
 ```
 
@@ -1307,7 +1349,7 @@ export async function GET(request: NextRequest) {
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase) // Service層経由
-  return ok(products)
+  return AppResponse.ok(products)
 })
 
 // src/app/api/products/route.ts
@@ -1328,14 +1370,14 @@ export const handleGetProducts = withHTTPError(async (request) => {
     .select('*')
 
   if (error) throw new AppError(error.message, 500)
-  return ok(data)
+  return AppResponse.ok(data)
 })
 
 // ✅ 推奨
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase) // Service層経由
-  return ok(products)
+  return AppResponse.ok(products)
 })
 ```
 
@@ -1350,7 +1392,7 @@ export const handleCreatePayment = withHTTPError(async (request) => {
   const paymentIntent = await stripe.paymentIntents.create({
     amount: body.amount,
   })
-  return ok(paymentIntent)
+  return AppResponse.ok(paymentIntent)
 })
 
 // ✅ 推奨
@@ -1360,6 +1402,6 @@ export const handleCreateOrder = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const order = await createOrder(supabase, validation.data) // Service層経由
-  return created(order)
+  return AppResponse.created(order)
 })
 ```

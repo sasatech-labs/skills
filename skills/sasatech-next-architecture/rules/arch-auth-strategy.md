@@ -32,7 +32,7 @@ export const handleUpdatePost = withHTTPError(async (request, context) => {
   if (!validation.success) return validation.response
 
   const updated = await updatePost(supabase, id, validation.data)
-  return ok(updated)
+  return AppResponse.ok(updated)
 })
 ```
 
@@ -87,7 +87,7 @@ export const handleUpdatePost = withHTTPError(async (request, context) => {
 
   // 認証済みユーザーIDをService層に渡す
   const post = await updatePost(supabase, session.user.id, id, validation.data)
-  return ok(post)
+  return AppResponse.ok(post)
 })
 ```
 

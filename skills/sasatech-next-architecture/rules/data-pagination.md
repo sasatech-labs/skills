@@ -17,7 +17,7 @@ tags: [data-access, pagination, repository, api, security]
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 
 // Repository - NG: 上限なしの全件取得
@@ -41,7 +41,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ok } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 import { validateSearchParams } from '@/lib/validation'
 import { withHTTPError } from '@/lib/with-http-error'
 import { getProducts } from './service'
@@ -59,7 +59,7 @@ export const handleGetProducts = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const result = await getProducts(supabase, validation.data)
-  return ok(result)
+  return AppResponse.ok(result)
 })
 ```
 

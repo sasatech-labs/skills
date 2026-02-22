@@ -15,14 +15,14 @@ Handler関数は`withHTTPError`でラップする。手動のtry-catch、`handle
 ### 手動try-catch
 
 ```typescript
-// NG: try-catch + serverError()の手動パターン
+// NG: try-catch + AppResponse.serverError()の手動パターン
 export async function handleGetProducts(request: NextRequest) {
   try {
     const supabase = await createClient()
     const products = await getProducts(supabase)
-    return ok(products)
+    return AppResponse.ok(products)
   } catch (error) {
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```
@@ -37,7 +37,7 @@ export async function handleGetProducts(request: NextRequest) {
   try {
     const supabase = await createClient()
     const products = await getProducts(supabase)
-    return ok(products)
+    return AppResponse.ok(products)
   } catch (error) {
     return handleApiError(error)
   }
@@ -52,16 +52,16 @@ export async function handleCreateProduct(request: NextRequest) {
   try {
     const supabase = await createClient()
     const product = await createProduct(supabase, data)
-    return created(product)
+    return AppResponse.created(product)
   } catch (error) {
     if (error instanceof AppError) {
       switch (error.statusCode) {
-        case 400: return badRequest(error.message)
-        case 404: return notFound(error.message)
-        default: return serverError()
+        case 400: return AppResponse.badRequest(error.message)
+        case 404: return AppResponse.notFound(error.message)
+        default: return AppResponse.serverError()
       }
     }
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```
@@ -75,7 +75,7 @@ import { withHTTPError } from '@/lib/with-http-error'
 export const handleGetProducts = withHTTPError(async (request) => {
   const supabase = await createClient()
   const products = await getProducts(supabase)
-  return ok(products)
+  return AppResponse.ok(products)
 })
 
 // OK: バリデーション付き
@@ -87,7 +87,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 
   const supabase = await createClient()
   const product = await createProduct(supabase, validation.data)
-  return created(product)
+  return AppResponse.created(product)
 })
 
 // OK: パラメータ付き
@@ -95,7 +95,7 @@ export const handleGetProduct = withHTTPError(async (request, context) => {
   const { id } = await context.params
   const supabase = await createClient()
   const product = await getProduct(supabase, id)
-  return ok(product)
+  return AppResponse.ok(product)
 })
 ```
 

@@ -450,7 +450,7 @@ import type {
   Subscription,
 } from './types'
 
-export const stripeAdapter = {
+const _stripeAdapter = {
   /**
    * 決済インテント作成
    * クライアント側で決済を完了するためのインテントを生成
@@ -604,6 +604,8 @@ export const stripeAdapter = {
     }
   },
 }
+
+export const stripeAdapter = _stripeAdapter
 ```
 
 #### Resend Adapter
@@ -617,7 +619,7 @@ import type { SendEmailInput, EmailResult } from './types'
 
 const DEFAULT_FROM = process.env.RESEND_FROM_EMAIL || 'noreply@example.com'
 
-export const resendAdapter = {
+const _resendAdapter = {
   /**
    * メール送信
    * HTMLまたはReactコンポーネントでメールを送信
@@ -678,6 +680,8 @@ export const resendAdapter = {
     })
   },
 }
+
+export const resendAdapter = _resendAdapter
 ```
 
 #### OpenAI Adapter
@@ -697,7 +701,7 @@ import type {
 const DEFAULT_CHAT_MODEL = 'gpt-4o'
 const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small'
 
-export const openaiAdapter = {
+const _openaiAdapter = {
   /**
    * チャット補完
    */
@@ -759,6 +763,8 @@ export const openaiAdapter = {
     }
   },
 }
+
+export const openaiAdapter = _openaiAdapter
 ```
 
 ### Features内のAdapter実装例
@@ -825,7 +831,7 @@ import type { WarehouseLocation } from './types'
  * 倉庫管理システムのロケーション形式をFeature固有の形式に変換
  * ビジネスルール: Zone-Rack-Bin形式でソート優先度を決定
  */
-export function mapToWarehouseLocation(externalLocation: any): WarehouseLocation {
+function _mapToWarehouseLocation(externalLocation: any): WarehouseLocation {
   return {
     warehouseId: externalLocation.warehouse_id,
     zone: externalLocation.zone_code,
@@ -840,7 +846,7 @@ export function mapToWarehouseLocation(externalLocation: any): WarehouseLocation
  * 1. 出荷口に近いゾーン優先
  * 2. 同一ゾーン内では賞味期限が近いものを優先（FEFO）
  */
-export function calculateAllocationPriority(
+function _calculateAllocationPriority(
   locations: WarehouseLocation[],
   expirationDates: Record<string, Date>
 ): WarehouseLocation[] {
@@ -860,6 +866,9 @@ export function calculateAllocationPriority(
     return expiryA - expiryB
   })
 }
+
+export const mapToWarehouseLocation = _mapToWarehouseLocation
+export const calculateAllocationPriority = _calculateAllocationPriority
 ```
 
 ```typescript
@@ -875,7 +884,7 @@ import type {
   WarehouseLocation,
 } from './types'
 
-export const warehouseAdapter = {
+const _warehouseAdapter = {
   /**
    * 在庫引当（Feature固有のビジネスロジックを含む）
    *
@@ -993,6 +1002,8 @@ export const warehouseAdapter = {
     }
   },
 }
+
+export const warehouseAdapter = _warehouseAdapter
 ```
 
 ```typescript
@@ -1022,7 +1033,7 @@ import { warehouseAdapter } from './adapters'
 import { inventoryRepository } from './repository'
 import type { CreateOrderAllocationInput } from './schema'
 
-export async function allocateInventoryForOrder(
+async function _allocateInventoryForOrder(
   supabase: SupabaseClient,
   input: CreateOrderAllocationInput
 ) {
@@ -1046,6 +1057,8 @@ export async function allocateInventoryForOrder(
 
   return allocation
 }
+
+export const allocateInventoryForOrder = _allocateInventoryForOrder
 ```
 
 ## エラーハンドリング
@@ -1063,7 +1076,7 @@ import { AppError } from '@/lib/errors'
 /**
  * Stripeエラーをアプリケーション共通のAppErrorに変換
  */
-export function handleStripeError(error: unknown): AppError {
+function _handleStripeError(error: unknown): AppError {
   // Stripe固有のエラー
   if (error instanceof Stripe.errors.StripeError) {
     switch (error.type) {
@@ -1134,6 +1147,8 @@ export function handleStripeError(error: unknown): AppError {
     'UNEXPECTED_ERROR'
   )
 }
+
+export const handleStripeError = _handleStripeError
 ```
 
 ### エラーハンドリングのポイント
@@ -1216,7 +1231,7 @@ export const stripeAdapter = {
 import { NextRequest } from 'next/server'
 import { stripeAdapter } from '@/lib/adapters/stripe'
 import { handlePaymentSuccess } from '@/features/payments'
-import { ok, badRequest, serverError } from '@/lib/api-response'
+import { AppResponse } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
   // 1. リクエストボディと署名を取得
@@ -1224,7 +1239,7 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get('stripe-signature')
 
   if (!signature) {
-    return badRequest('署名がありません')
+    return AppResponse.badRequest('署名がありません')
   }
 
   try {
@@ -1254,10 +1269,10 @@ export async function POST(request: NextRequest) {
       // ... 他のイベント
     }
 
-    return ok({ received: true })
+    return AppResponse.ok({ received: true })
   } catch (error) {
     console.error('Webhook処理エラー:', error)
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```
@@ -1286,7 +1301,7 @@ import type { CreateOrderInput, Order } from './schema'
 import { AppError } from '@/lib/errors'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
 
-export async function createOrder(
+async function _createOrder(
   supabase: SupabaseClient,
   input: CreateOrderInput
 ): Promise<{ order: Order; clientSecret: string }> {
@@ -1332,6 +1347,8 @@ export async function createOrder(
     clientSecret: paymentIntent.clientSecret,
   }
 }
+
+export const createOrder = _createOrder
 ```
 
 ### AI機能付きサービス
@@ -1344,7 +1361,7 @@ import { openaiAdapter } from '@/lib/adapters/openai'
 import { contentRepository } from './repository'
 import type { CreateContentInput } from './schema'
 
-export async function createContentWithAI(
+async function _createContentWithAI(
   supabase: SupabaseClient,
   input: CreateContentInput
 ) {
@@ -1377,6 +1394,8 @@ export async function createContentWithAI(
     embedding: embedding.embedding,
   })
 }
+
+export const createContentWithAI = _createContentWithAI
 ```
 
 ## テスト方法
@@ -1690,7 +1709,7 @@ Adapter層はService層からのみ呼び出します。Handler層から直接�
 export async function POST(request: NextRequest) {
   const body = await request.json()
   const paymentIntent = await stripeAdapter.createPaymentIntent(body)
-  return ok(paymentIntent)
+  return AppResponse.ok(paymentIntent)
 }
 
 // ✅ 正しい（Serviceを経由）
@@ -1698,7 +1717,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const supabase = await createClient()
   const order = await createOrder(supabase, body)  // Service層
-  return ok(order)
+  return AppResponse.ok(order)
 }
 ```
 
@@ -1956,7 +1975,7 @@ import { stripe } from './client'
 import { handleStripeError } from './errors'
 import type { CreatePaymentIntentInput, PaymentIntent } from './types'
 
-export const stripeAdapter = {
+const _stripeAdapter = {
   async createPaymentIntent(input: CreatePaymentIntentInput): Promise<PaymentIntent> {
     try {
       const intent = await stripe.paymentIntents.create({
@@ -1981,6 +2000,8 @@ export const stripeAdapter = {
     }
   },
 }
+
+export const stripeAdapter = _stripeAdapter
 ```
 
 **ポイント**:
@@ -1998,7 +2019,7 @@ import { mapToWarehouseLocation, calculateAllocationPriority } from './mapper'
 import { AppError } from '@/lib/errors'
 import type { StockAllocationInput, StockAllocationResult } from './types'
 
-export const warehouseAdapter = {
+const _warehouseAdapter = {
   async allocateStock(input: StockAllocationInput): Promise<StockAllocationResult> {
     try {
       // 1. 利用可能な在庫ロケーションを取得
@@ -2044,6 +2065,8 @@ export const warehouseAdapter = {
     }
   },
 }
+
+export const warehouseAdapter = _warehouseAdapter
 ```
 
 **ポイント**:
@@ -2062,7 +2085,7 @@ import { resendAdapter } from '@/lib/adapters/resend'
 import { orderRepository } from './repository'
 import type { CreateOrderInput, Order } from './schema'
 
-export async function createOrder(
+async function _createOrder(
   supabase: SupabaseClient,
   input: CreateOrderInput
 ): Promise<{ order: Order; clientSecret: string }> {
@@ -2101,6 +2124,8 @@ export async function createOrder(
     clientSecret: paymentIntent.clientSecret,
   }
 }
+
+export const createOrder = _createOrder
 ```
 
 **ポイント**:
@@ -2121,7 +2146,7 @@ import { stripeAdapter } from '@/lib/adapters/stripe'
 export async function POST(request: NextRequest) {
   const body = await request.json()
   const paymentIntent = await stripeAdapter.createPaymentIntent(body)
-  return ok(paymentIntent)
+  return AppResponse.ok(paymentIntent)
 }
 
 // ✅ 推奨（Service層を経由）
@@ -2132,9 +2157,9 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const order = await createOrder(supabase, validation.data)
-    return created(order)
+    return AppResponse.created(order)
   } catch (error) {
-    return serverError()
+    return AppResponse.serverError()
   }
 }
 ```
