@@ -104,6 +104,95 @@ export async function updatePost(
 - 所有権違反は`AppError.forbidden()`で403レスポンスを返す
 - 共有ヘルパー（`requireOwnership`等）は作成しない
 
+### 認証操作（Service層）
+
+SignOut、SignInWithOTPなどの**認証操作**は、Service層に実装する。Handler層はリクエストの受け取りとバリデーションのみを行い、認証操作のロジックはService層に委譲する。
+
+認証操作がService層の責務である理由:
+- 認証操作はビジネスロジックの一部である（セッション管理、OTP送信フローなど）
+- Handler層の責務はリクエスト/レスポンスの境界処理に限定される
+- Supabaseクライアントは既にインフラとして初期化済みのため、Adapter層でラップする必要はない
+
+```typescript
+// src/features/auth/core/handler.ts
+import 'server-only'
+
+import { createClient } from '@/lib/supabase/server'
+import { AppResponse } from '@/lib/api-response'
+import { validateBody } from '@/lib/validation'
+import { withHTTPError } from '@/lib/with-http-error'
+import { AppError } from '@/lib/errors'
+import { signInWithOTPSchema } from './schema'
+import { signOut, signInWithOTP } from './service'
+
+// サインアウト: セッション確認後、Service層に委譲
+const _handleSignOut = withHTTPError(async (request) => {
+  const supabase = await createClient()
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw AppError.unauthorized()
+  }
+
+  await signOut(supabase)
+  return AppResponse.noContent()
+})
+
+// OTPサインイン: バリデーション後、Service層に委譲
+const _handleSignInWithOTP = withHTTPError(async (request) => {
+  const validation = await validateBody(request, signInWithOTPSchema)
+  if (!validation.success) {
+    return validation.response
+  }
+
+  const supabase = await createClient()
+  const result = await signInWithOTP(supabase, validation.data)
+  return AppResponse.ok(result)
+})
+
+export const handleSignOut = _handleSignOut
+export const handleSignInWithOTP = _handleSignInWithOTP
+```
+
+```typescript
+// src/features/auth/core/service.ts
+import 'server-only'
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SignInWithOTPInput } from './schema'
+import { AppError } from '@/lib/errors'
+
+async function _signOut(supabase: SupabaseClient): Promise<void> {
+  const { error } = await supabase.auth.signOut()
+  if (error) {
+    throw new AppError(error.message, 500, 'SIGN_OUT_FAILED')
+  }
+}
+
+async function _signInWithOTP(
+  supabase: SupabaseClient,
+  input: SignInWithOTPInput
+): Promise<{ message: string }> {
+  const { error } = await supabase.auth.signInWithOtp({
+    email: input.email,
+  })
+
+  if (error) {
+    throw new AppError(error.message, 500, 'OTP_SEND_FAILED')
+  }
+
+  return { message: 'OTP sent successfully' }
+}
+
+export const signOut = _signOut
+export const signInWithOTP = _signInWithOTP
+```
+
+**ポイント**:
+- Handler層は`supabase.auth.signOut()`や`supabase.auth.signInWithOtp()`を直接呼び出さない
+- 認証操作のエラーハンドリングはService層で`AppError`に変換する
+- SignOutではセッション確認が必要だが、SignInWithOTPではセッション確認は不要（未認証ユーザーの操作のため）
+
 ## 使用例
 
 ### 例1: プロフィール取得（楽観的認証のみ）
@@ -367,6 +456,40 @@ export const handleDeleteUser = withHTTPError(async (request, context) => {
 
   // Service層に委譲（ロールチェックはService層内で行う）
   await deleteUser(supabase, session.user.id, id)
+  return AppResponse.noContent()
+})
+```
+
+### Handler層での認証操作の直接実行
+
+```typescript
+// 避けるべき: Handler層でsupabase.auth.signOut()を直接呼び出す
+export const handleSignOut = withHTTPError(async (request) => {
+  const supabase = await createClient()
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw AppError.unauthorized()
+
+  // Handler層で認証操作を直接実行している
+  const { error } = await supabase.auth.signOut()
+  if (error) throw new AppError(error.message, 500)
+
+  return AppResponse.noContent()
+})
+```
+
+```typescript
+// 推奨: 認証操作はService層に委譲する
+export const handleSignOut = withHTTPError(async (request) => {
+  const supabase = await createClient()
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw AppError.unauthorized()
+  }
+
+  // Service層に委譲
+  await signOut(supabase)
   return AppResponse.noContent()
 })
 ```

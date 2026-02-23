@@ -159,6 +159,7 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 | [arch-fetch-strategy](rules/arch-fetch-strategy.md) | CRITICAL | SSR/CSR問わず、fetcher経由でAPI Route呼び出し |
 | [arch-logging-levels](rules/arch-logging-levels.md) | MEDIUM | ログレベルをレイヤーと状況に応じて使い分け |
 | [arch-auth-strategy](rules/arch-auth-strategy.md) | HIGH | Handler層で楽観的認証、Service層で厳密な認可。共有ヘルパー関数禁止 |
+| [arch-auth-operations](rules/arch-auth-operations.md) | HIGH | SignOut、SignInWithOTP等の認証操作はService層に実装、Handler層での直接実行禁止 |
 | [arch-public-api](rules/arch-public-api.md) | MEDIUM | Feature の公開APIは index.server.ts（Service, Handler）と index.client.ts（Fetcher, 型）で分離管理 |
 | [arch-handler-route-separation](rules/arch-handler-route-separation.md) | HIGH | API Routeは薄いエントリーポイントに限定、ロジックはHandler層に分離 |
 | [arch-transaction-rpc-required](rules/arch-transaction-rpc-required.md) | HIGH | 複数テーブル更新のトランザクション処理はSupabase RPC関数を使用 |
