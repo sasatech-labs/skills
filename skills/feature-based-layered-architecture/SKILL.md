@@ -1,5 +1,5 @@
 ---
-name: sasatech-next-architecture
+name: Feature-Based Layered Architecture
 description: Feature-Based Layered Architecture for Next.js (App Router) with Supabase. Use when creating API routes, services, repositories, or components with TypeScript. Covers Handler/Service/Repository/Adapter layers, Zod validation, and feature module structure.
 ---
 
