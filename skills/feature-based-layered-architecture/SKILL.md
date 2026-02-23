@@ -161,8 +161,6 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 | [arch-auth-strategy](rules/arch-auth-strategy.md) | HIGH | Handler層で楽観的認証、Service層で厳密な認可。共有ヘルパー関数禁止 |
 | [arch-public-api](rules/arch-public-api.md) | MEDIUM | Feature の公開APIは index.server.ts（Service, Handler）と index.client.ts（Fetcher, 型）で分離管理 |
 | [arch-handler-route-separation](rules/arch-handler-route-separation.md) | HIGH | API Routeは薄いエントリーポイントに限定、ロジックはHandler層に分離 |
-| [arch-no-direct-layer-exports](rules/arch-no-direct-layer-exports.md) | HIGH | Repository/Adapterの直接export禁止、Service関数経由で公開 |
-| [arch-adapter-via-service](rules/arch-adapter-via-service.md) | HIGH | Handler層からのAdapter直接呼び出し禁止、Service層経由必須 |
 | [arch-transaction-rpc-required](rules/arch-transaction-rpc-required.md) | HIGH | 複数テーブル更新のトランザクション処理はSupabase RPC関数を使用 |
 | [arch-adapter-placement](rules/arch-adapter-placement.md) | MEDIUM | 汎用Adapterは`lib/adapters/`、Feature固有Adapterは`features/*/core/`に配置 |
 | [arch-feature-adapter-isolation](rules/arch-feature-adapter-isolation.md) | MEDIUM | Feature内Adapterが他Featureの内部Adapterに依存することを禁止 |

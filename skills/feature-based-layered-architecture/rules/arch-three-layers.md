@@ -12,22 +12,56 @@ tags: [architecture, layers, handler, service, repository, adapter]
 
 ## NG例
 
+### Handler層のスキップ
+
 ```typescript
-// NG: API Routeから直接Supabaseにアクセス
+// NG: API Route内で直接Supabaseにアクセスしている
+// src/app/api/products/route.ts
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
-  // 問題: Handlerで直接DBアクセスを行っている
+  // 問題: Handler/Service/Repository層を経由していない
   const { data } = await supabase.from('products').select('*')
 
   return NextResponse.json(data)
 }
 ```
 
+### Service層のスキップ
+
 ```typescript
-// NG: ServiceからSupabaseに直接アクセス
+// NG: Handler層からRepositoryを直接呼び出している
+// src/features/products/core/handler.ts
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  // 問題: Service層をバイパスしてRepositoryを直接使用している
+  const products = await productRepository.findMany(supabase)
+  return AppResponse.ok(products)
+})
+```
+
+```typescript
+// NG: Handler層からAdapterを直接呼び出している
+// src/features/payments/core/handler.ts
+export const handleCreatePayment = withHTTPError(async (request) => {
+  const body = await request.json()
+  const input = paymentSchema.parse(body)
+  // 問題: Service層をバイパスしてAdapterを直接使用している
+  const paymentIntent = await stripeAdapter.createPaymentIntent({
+    amount: input.amount,
+    currency: 'jpy',
+  })
+  return AppResponse.ok(paymentIntent)
+})
+```
+
+### Repository層のスキップ
+
+```typescript
+// NG: Service層からSupabaseに直接アクセスしている
+// src/features/products/core/service.ts
 export async function getProducts(supabase: SupabaseClient) {
-  // 問題: Repositoryを経由せずに直接DBアクセスを行っている
+  // 問題: Repository層を経由せずに直接DBアクセスを行っている
   const { data } = await supabase.from('products').select('*')
   return data
 }
@@ -35,7 +69,7 @@ export async function getProducts(supabase: SupabaseClient) {
 
 ## OK例
 
-### CSRパス: API Route → Handler → Service → Repository
+### Repository経由パス
 
 ```typescript
 // OK: API Route - src/app/api/products/route.ts
@@ -70,7 +104,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { productRepository } from './repository'
 
 export async function getProducts(supabase: SupabaseClient) {
-  // 推奨: Repositoryを呼び出し、DBアクセスを委譲
+  // Repositoryを呼び出し、DBアクセスを委譲する
   return productRepository.findMany(supabase)
 }
 ```
@@ -83,7 +117,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const productRepository = {
   async findMany(supabase: SupabaseClient) {
-    // 推奨: Repositoryでのみデータアクセスを実行
+    // Repositoryでのみデータアクセスを実行する
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -95,7 +129,36 @@ export const productRepository = {
 }
 ```
 
-### Adapter層（外部API連携）
+### Adapter経由パス
+
+```typescript
+// OK: Service層 - src/features/payments/core/service.ts
+import 'server-only'
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { stripeAdapter } from '@/lib/adapters/stripe'
+import { paymentRepository } from './repository'
+import type { CreatePaymentInput } from './schema'
+
+// Service層でAdapterとRepositoryを連携する
+export async function createPayment(
+  supabase: SupabaseClient,
+  input: CreatePaymentInput
+) {
+  const paymentIntent = await stripeAdapter.createPaymentIntent({
+    amount: input.amount,
+    currency: 'jpy',
+  })
+
+  await paymentRepository.create(supabase, {
+    stripePaymentIntentId: paymentIntent.id,
+    amount: input.amount,
+    status: 'pending',
+  })
+
+  return paymentIntent
+}
+```
 
 ```typescript
 // OK: Adapter層 - src/lib/adapters/stripe/index.ts
