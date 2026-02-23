@@ -48,13 +48,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GET, POST } from '@/app/api/products/route'
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getProducts, createProduct } from '@/features/products'
+import { getProducts, createProduct } from '@/features/products/index.server'
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
-vi.mock('@/features/products', () => ({
+vi.mock('@/features/products/index.server', () => ({
   getProducts: vi.fn(),
   createProduct: vi.fn(),
 }))

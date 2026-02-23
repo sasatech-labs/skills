@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 ```typescript
 // src/app/api/products/route.ts
 // OK: Handler関数を呼び出すだけ
-import { handleGetProducts, handleCreateProduct } from '@/features/products'
+import { handleGetProducts, handleCreateProduct } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 export const POST = handleCreateProduct

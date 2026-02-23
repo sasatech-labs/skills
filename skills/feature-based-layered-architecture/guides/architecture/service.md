@@ -44,9 +44,9 @@ Service層は`features`ディレクトリ配下に配置します。
 
 ```
 src/features/products/
-├── index.ts          # 公開API
+├── index.server.ts   # サーバー専用の公開API（Service, Handler）
+├── index.client.ts   # クライアント利用可の公開API（Fetcher, 型）
 ├── core/             # コア機能
-│   ├── index.ts
 │   ├── schema.ts     # Zodスキーマ + 型定義
 │   ├── service.ts    # Service層（server-only）
 │   └── repository.ts # Repository層（server-only）
@@ -142,26 +142,35 @@ export const deleteProduct = _deleteProduct
 ### 公開APIの定義
 
 ```typescript
-// src/features/products/core/index.ts
+// src/features/products/index.server.ts
+import 'server-only'
+
 export {
   getProducts,
   getProduct,
   createProduct,
   updateProduct,
   deleteProduct,
-} from './service'
+} from './core/service'
+
+export {
+  handleGetProducts,
+  handleGetProduct,
+  handleCreateProduct,
+  handleUpdateProduct,
+  handleDeleteProduct,
+} from './core/handler'
+```
+
+```typescript
+// src/features/products/index.client.ts
+export { productsFetcher } from './core/fetcher'
 
 export type {
   Product,
   CreateProductInput,
   UpdateProductInput,
-} from './schema'
-```
-
-```typescript
-// src/features/products/index.ts
-export * from './core'
-export * as reviews from './reviews'
+} from './core/schema'
 ```
 
 ## ビジネスロジックの実装方法

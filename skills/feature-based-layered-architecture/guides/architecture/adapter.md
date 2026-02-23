@@ -1230,7 +1230,7 @@ export const stripeAdapter = {
 // src/app/api/webhooks/stripe/route.ts
 import { NextRequest } from 'next/server'
 import { stripeAdapter } from '@/lib/adapters/stripe'
-import { handlePaymentSuccess } from '@/features/payments'
+import { handlePaymentSuccess } from '@/features/payments/index.server'
 import { AppResponse } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {

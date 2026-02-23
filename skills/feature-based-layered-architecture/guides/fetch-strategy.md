@@ -116,7 +116,7 @@ SSRでもCSRでも同じfetcher → API Route → Handler → Serviceの経路�
 ```typescript
 // SSR: Server ComponentからFetcher経由でAPI Routeを呼び出す
 // app/(auth)/profile/page.tsx
-import { usersFetcher } from '@/features/users'
+import { usersFetcher } from '@/features/users/index.client'
 
 export default async function ProfilePage() {
   const profile = await usersFetcher.getMyProfile()
@@ -184,7 +184,7 @@ export const productsFetcher = {
 
 ```typescript
 // app/(auth)/products/[id]/page.tsx
-import { productsFetcher } from '@/features/products'
+import { productsFetcher } from '@/features/products/index.client'
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const product = await productsFetcher.getById(params.id)
@@ -201,7 +201,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
 // features/products/ui/product-search.tsx
 'use client'
 
-import { useProducts } from '@/features/products'
+import { useProducts } from '@/features/products/index.client'
 
 export function ProductSearch() {
   const [keyword, setKeyword] = useState('')
@@ -222,7 +222,7 @@ export function ProductSearch() {
 
 ```typescript
 // app/(auth)/products/page.tsx
-import { productsFetcher } from '@/features/products'
+import { productsFetcher } from '@/features/products/index.client'
 import { ProductPage } from '@/features/products/ui/product-page'
 
 export default async function Page() {
@@ -238,8 +238,8 @@ export default async function Page() {
 // features/products/ui/product-page.tsx
 'use client'
 
-import { useProducts } from '@/features/products'
-import type { PaginatedResult, Product } from '@/features/products'
+import { useProducts } from '@/features/products/index.client'
+import type { PaginatedResult, Product } from '@/features/products/index.client'
 
 type Props = {
   initialData: PaginatedResult<Product>
@@ -269,7 +269,7 @@ export function ProductPage({ initialData }: Props) {
 // NG: SSRで十分なデータをCSRで取得している
 'use client'
 
-import { useProduct } from '@/features/products'
+import { useProduct } from '@/features/products/index.client'
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const { data, isLoading } = useProduct(params.id)
@@ -283,7 +283,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
 ```typescript
 // NG: Server ComponentからService層を直接呼び出している
-import { getProduct } from '@/features/products'
+import { getProduct } from '@/features/products/index.server'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
@@ -300,7 +300,7 @@ fetcher経由でAPI Routeを呼び出す。Service直接呼び出しはデータ
 
 ```typescript
 // NG: Server ComponentからHandler関数を呼び出している
-import { handleGetProduct } from '@/features/products'
+import { handleGetProduct } from '@/features/products/index.server'
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const response = await handleGetProduct(params.id)

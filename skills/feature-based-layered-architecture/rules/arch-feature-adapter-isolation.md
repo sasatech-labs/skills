@@ -47,7 +47,7 @@ export const orderPaymentAdapter = {
 ```typescript
 // src/features/orders/core/service.ts
 // OK: 他FeatureのService関数を経由してアクセスする
-import { allocateStock } from '@/features/inventory'
+import { allocateStock } from '@/features/inventory/index.server'
 
 export async function fulfillOrder(
   supabase: SupabaseClient,

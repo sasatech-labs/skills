@@ -39,7 +39,7 @@ export async function getProducts(supabase: SupabaseClient) {
 
 ```typescript
 // OK: API Route - src/app/api/products/route.ts
-import { handleGetProducts } from '@/features/products'
+import { handleGetProducts } from '@/features/products/index.server'
 
 // API Routeは薄いWrapper、Handler関数を呼び出すだけ
 export const GET = handleGetProducts

@@ -47,7 +47,8 @@ Adapter               外部 API 連携（Stripe, Resend 等）
 
 ```
 features/auth/
-├── index.ts          # 公開API
+├── index.server.ts   # サーバー専用の公開API（Service, Handler）
+├── index.client.ts   # クライアント利用可の公開API（Fetcher, 型）
 └── core/
     ├── schema.ts     # Zodスキーマ + 型定義
     ├── handler.ts    # リクエスト / レスポンス処理 (server-only)
@@ -62,9 +63,9 @@ features/auth/
 
 ```
 features/products/
-├── index.ts          # 公開API（サブ機能を再エクスポート）
+├── index.server.ts   # サーバー専用の公開API（サブ機能含む）
+├── index.client.ts   # クライアント利用可の公開API（サブ機能含む）
 ├── core/             # コア機能
-│   ├── index.ts
 │   ├── schema.ts
 │   ├── handler.ts
 │   ├── service.ts
@@ -73,7 +74,6 @@ features/products/
 │   ├── fetcher.ts
 │   └── hooks.ts
 ├── reviews/          # サブ機能
-│   ├── index.ts
 │   ├── schema.ts
 │   ├── handler.ts
 │   ├── service.ts
@@ -91,9 +91,15 @@ features/products/
 ### 単一機能
 
 ```typescript
-// features/auth/index.ts
+// features/auth/index.server.ts
+import 'server-only'
+
 export { handleSignIn, handleSignUp, handleSignOut } from './core/handler'
 export { signIn, signUp, signOut } from './core/service'
+```
+
+```typescript
+// features/auth/index.client.ts
 export { authFetcher } from './core/fetcher'
 export type { User, AuthState } from './core/schema'
 ```
@@ -101,33 +107,30 @@ export type { User, AuthState } from './core/schema'
 ### グループ化された機能
 
 ```typescript
-// features/products/index.ts
-export * from './core'
-export * as reviews from './reviews'
-export * as inventory from './inventory'
+// features/products/index.server.ts
+import 'server-only'
+
+export { handleGetProducts, handleCreateProduct } from './core/handler'
+export { getProducts, createProduct } from './core/service'
+export * as reviews from './reviews/service'
 ```
 
 ```typescript
-// features/products/core/index.ts
-export { handleGetProducts, handleCreateProduct } from './handler'
-export { getProducts, createProduct } from './service'
-export { productsFetcher } from './fetcher'
-export type { Product, CreateProductInput } from './schema'
+// features/products/index.client.ts
+export { productsFetcher } from './core/fetcher'
+export type { Product, CreateProductInput } from './core/schema'
 ```
 
 ```typescript
 // 利用側（API Route）
-import { handleGetProducts } from '@/features/products'
+import { handleGetProducts } from '@/features/products/index.server'
 
-// 利用側（SSR page.tsx / CSR fetcher）
-import { productsFetcher } from '@/features/products'
+// 利用側（CSR hooks / クライアントコンポーネント）
+import { productsFetcher } from '@/features/products/index.client'
+import type { Product } from '@/features/products/index.client'
 
 // 利用側（他のFeatureのService）
-import { getProducts, Product } from '@/features/products'
-import { reviews } from '@/features/products'
-
-// または直接インポート
-import { handleGetReviews } from '@/features/products/reviews'
+import { getProducts } from '@/features/products/index.server'
 ```
 
 ## 段階的スケーリング
@@ -194,7 +197,7 @@ features/auth/            features/users/
 
 ### 分割時の注意点
 
-1. **公開APIは維持**: `index.ts`で再エクスポートし、利用側のインポートパスは変更しない
+1. **公開APIは維持**: `index.server.ts`/`index.client.ts`で再エクスポートし、利用側のインポートパスは変更しない
 2. **段階的に移行**: すべてのファイルを一度に分割せず、必要なレイヤーから順次分割する
 3. **命名規則の統一**: 分割後のファイル名は`[entity]-[layer].ts`形式で統一する
 4. **テストも同様に分割**: ファイルを分割したら、対応するテストファイルも分割する

@@ -8,12 +8,14 @@ tags: [architecture, layers, exports, service, repository, adapter]
 
 ## ルール
 
-Featureの公開API（`index.ts`）からRepository/Adapterを直接exportしない。外部からのデータアクセスや外部サービス連携は、Service関数を経由して公開する。
+Featureの公開API（`index.server.ts`/`index.client.ts`）からRepository/Adapterを直接exportしない。外部からのデータアクセスや外部サービス連携は、Service関数を経由して公開する。
 
 ## NG例
 
 ```typescript
-// src/features/products/index.ts
+// src/features/products/index.server.ts
+import 'server-only'
+
 // NG: Repositoryを直接exportしている
 export { productRepository } from './core/repository'
 
@@ -24,7 +26,7 @@ export { productSearchAdapter } from './core/adapter'
 ```typescript
 // src/features/orders/core/service.ts
 // NG: 他のFeatureのRepositoryを直接使用している
-import { productRepository } from '@/features/products'
+import { productRepository } from '@/features/products/index.server'
 
 export async function createOrder(supabase: SupabaseClient, input: CreateOrderInput) {
   // NG: Repositoryを直接呼び出してService層をバイパスしている
@@ -36,17 +38,25 @@ export async function createOrder(supabase: SupabaseClient, input: CreateOrderIn
 ## OK例
 
 ```typescript
-// src/features/products/index.ts
-// OK: Service関数のみをexportしている
+// src/features/products/index.server.ts
+import 'server-only'
+
+// OK: Service関数とHandler関数のみをexportしている
 export { getProducts, getProductById, createProduct } from './core/service'
 export { handleGetProducts, handleCreateProduct } from './core/handler'
+```
+
+```typescript
+// src/features/products/index.client.ts
+// OK: Fetcher関数と型をexportしている
+export { productsFetcher } from './core/fetcher'
 export type { Product, CreateProductInput } from './core/schema'
 ```
 
 ```typescript
 // src/features/orders/core/service.ts
 // OK: 他のFeatureのService関数を経由してアクセスしている
-import { getProductById } from '@/features/products'
+import { getProductById } from '@/features/products/index.server'
 
 export async function createOrder(supabase: SupabaseClient, input: CreateOrderInput) {
   // OK: Service関数を経由してデータを取得する

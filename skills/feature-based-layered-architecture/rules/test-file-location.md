@@ -34,7 +34,8 @@ src/features/products/
 ├── core/
 │   ├── service.ts
 │   └── repository.ts
-└── index.ts
+├── index.server.ts
+└── index.client.ts
 ```
 
 推奨理由:

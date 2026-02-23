@@ -8,24 +8,24 @@ tags: [architecture, feature, module, exports, public-api]
 
 ## ルール
 
-Featureの`index.ts`は公開API（Service関数、Handler関数、Fetcher関数、型）のみをexportする。Repository、Adapter、内部実装はexportしない。
+Featureの公開APIは`index.server.ts`と`index.client.ts`の2ファイルで管理する。`server-only`が必要なサーバー専用コード（Service関数、Handler関数）と、クライアントでも使用可能なコード（Fetcher関数、型）を分離する。Repository、Adapter、内部実装はどちらからもexportしない。
 
 ## NG例
 
 ```typescript
 // src/features/products/index.ts
-// NG: RepositoryやAdapterを外部に公開している
+// NG: server-only対象とクライアント対象を同一ファイルからexportしている
 export { getProducts, createProduct } from './core/service'
 export { handleGetProducts, handleCreateProduct } from './core/handler'
+export { productsFetcher } from './core/fetcher'
 export { productRepository } from './core/repository'  // NG: 内部実装の公開
-export { stripeAdapter } from './core/adapter'          // NG: 内部実装の公開
 export type { Product, CreateProductInput } from './core/schema'
 ```
 
 ```typescript
 // NG: 他のFeatureからRepositoryを直接参照
 // src/features/orders/core/service.ts
-import { productRepository } from '@/features/products'  // NG: Feature境界を越えた内部参照
+import { productRepository } from '@/features/products/index.server'  // NG: Feature境界を越えた内部参照
 
 export async function createOrder(supabase: SupabaseClient, input: CreateOrderInput) {
   // 他のFeatureのRepositoryを直接呼び出している
@@ -37,26 +37,41 @@ export async function createOrder(supabase: SupabaseClient, input: CreateOrderIn
 ## OK例
 
 ```typescript
-// src/features/products/index.ts
-// OK: Service関数、Handler関数、Fetcher関数、型のみをexport
+// src/features/products/index.server.ts
+// OK: サーバー専用のService関数とHandler関数をexport
+import 'server-only'
+
 export { getProducts, getProduct, createProduct, updateProduct, deleteProduct } from './core/service'
 export { handleGetProducts, handleGetProduct, handleCreateProduct, handleUpdateProduct, handleDeleteProduct } from './core/handler'
-export { productsFetcher } from './core/fetcher'
-export type { Product, CreateProductInput, UpdateProductInput } from './core/schema'
 
 // Repository、Adapter、内部実装はexportしない
 ```
 
 ```typescript
+// src/features/products/index.client.ts
+// OK: クライアントでも使用可能なFetcher関数と型をexport
+export { productsFetcher } from './core/fetcher'
+export type { Product, CreateProductInput, UpdateProductInput } from './core/schema'
+```
+
+```typescript
 // OK: 他のFeatureからはService関数を経由する
 // src/features/orders/core/service.ts
-import { getProduct } from '@/features/products'  // OK: 公開APIのService関数を使用
+import { getProduct } from '@/features/products/index.server'  // OK: サーバー用公開APIを使用
 
 export async function createOrder(supabase: SupabaseClient, input: CreateOrderInput) {
   // 公開されたService関数を呼び出す
   const product = await getProduct(supabase, input.productId)
   // ...
 }
+```
+
+```typescript
+// OK: クライアントコンポーネントからはindex.clientを使用
+// src/features/products/components/product-list.tsx
+'use client'
+
+import type { Product } from '@/features/products/index.client'  // OK: クライアント用公開APIを使用
 ```
 
 ## 理由
@@ -71,12 +86,25 @@ export async function createOrder(supabase: SupabaseClient, input: CreateOrderIn
 
 ## 公開APIの構成
 
+### index.server.ts（サーバー専用）
+
+`import 'server-only'`を含む。クライアントコンポーネントからインポートするとビルドエラーになる。
+
 | 公開対象 | 理由 |
 |----------|------|
 | Service関数 | 他のFeatureから呼び出すため（サーバーサイド） |
 | Handler関数 | API Routeから呼び出すため |
+
+### index.client.ts（クライアント利用可）
+
+`server-only`を含まない。サーバー・クライアント両方から使用できる。
+
+| 公開対象 | 理由 |
+|----------|------|
 | Fetcher関数 | SSR page.tsxやCSR hooks.tsから呼び出すため |
 | 型（Schema由来） | コンポーネントや他のFeatureで型として使用するため |
+
+### 非公開
 
 | 非公開対象 | 理由 |
 |------------|------|

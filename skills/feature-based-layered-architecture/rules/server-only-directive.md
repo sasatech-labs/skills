@@ -54,7 +54,7 @@ export const productRepository = {
 // src/app/api/products/route.ts
 import 'server-only'  // OK: API Routeでもserver-onlyを記述する
 
-import { handleGetProducts } from '@/features/products'
+import { handleGetProducts } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 ```

@@ -253,7 +253,7 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AppError } from '@/lib/errors'
-import { getUserById } from '@/features/users'
+import { getUserById } from '@/features/users/index.server'
 import { analyticsRepository } from './repository'
 
 export async function getAdminDashboard(
@@ -281,7 +281,7 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AppError } from '@/lib/errors'
-import { getUserById } from '@/features/users'
+import { getUserById } from '@/features/users/index.server'
 import { postRepository } from './repository'
 
 export async function deletePost(

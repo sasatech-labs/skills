@@ -16,7 +16,7 @@ SSR/CSR問わず、fetcher.ts経由でAPI Routeを呼び出す。Server Componen
 
 ```typescript
 // src/app/(auth)/products/[id]/page.tsx
-import { getProduct } from '@/features/products'
+import { getProduct } from '@/features/products/index.server'
 import { createClient } from '@/lib/supabase/server'
 
 // NG: Server ComponentからService層を直接呼び出している
@@ -32,7 +32,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
 ```typescript
 // src/app/(auth)/products/[id]/page.tsx
-import { handleGetProduct } from '@/features/products'
+import { handleGetProduct } from '@/features/products/index.server'
 
 // NG: Server ComponentからHandler関数を呼び出している
 export default async function ProductPage({ params }: { params: { id: string } }) {
@@ -61,7 +61,7 @@ export const productsFetcher = {
 
 ```typescript
 // src/app/(auth)/products/[id]/page.tsx
-import { productsFetcher } from '@/features/products'
+import { productsFetcher } from '@/features/products/index.client'
 
 // OK: SSRでもfetcher経由でAPI Routeを呼び出す
 export default async function ProductPage({ params }: { params: { id: string } }) {

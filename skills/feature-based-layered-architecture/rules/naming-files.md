@@ -69,10 +69,11 @@ src/components/
 
 ```plaintext
 src/features/products/
-├── index.ts
+├── index.server.ts          # サーバー専用の公開API
+├── index.client.ts          # クライアント利用可の公開API
 ├── core/
-│   ├── index.ts
 │   ├── schema.ts            # 単数形
+│   ├── handler.ts           # 単数形
 │   ├── service.ts           # 単数形
 │   ├── repository.ts        # 単数形
 │   ├── fetcher.ts           # 単数形

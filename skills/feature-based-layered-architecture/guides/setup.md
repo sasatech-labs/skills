@@ -204,8 +204,8 @@ npx supabase gen types typescript --local > src/types/database.ts
 ```bash
 # 新しいfeatureを作成
 mkdir -p src/features/products/core
-touch src/features/products/core/{index,schema,service,repository,fetcher,hooks}.ts
-touch src/features/products/index.ts
+touch src/features/products/core/{schema,handler,service,repository,fetcher,hooks}.ts
+touch src/features/products/{index.server,index.client}.ts
 ```
 
 ## 確認チェックリスト

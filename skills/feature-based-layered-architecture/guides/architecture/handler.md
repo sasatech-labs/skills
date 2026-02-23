@@ -58,7 +58,7 @@ API Routeは薄いエントリーポイントとして、Handler関数を呼び�
 
 ```typescript
 // src/app/api/products/route.ts
-import { handleGetProducts, handleCreateProduct } from '@/features/products'
+import { handleGetProducts, handleCreateProduct } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 export const POST = handleCreateProduct
@@ -70,7 +70,7 @@ import {
   handleGetProduct,
   handleUpdateProduct,
   handleDeleteProduct
-} from '@/features/products'
+} from '@/features/products/index.server'
 
 export const GET = handleGetProduct
 export const PATCH = handleUpdateProduct
@@ -650,7 +650,7 @@ export const handleCreateProduct = _handleCreateProduct
 
 ```typescript
 // src/app/api/products/route.ts
-import { handleCreateProduct } from '@/features/products'
+import { handleCreateProduct } from '@/features/products/index.server'
 
 export const POST = handleCreateProduct
 ```
@@ -704,7 +704,7 @@ export const handleCreateReview = _handleCreateReview
 
 ```typescript
 // src/app/api/products/[id]/reviews/route.ts
-import { handleGetReviews, handleCreateReview } from '@/features/products/reviews'
+import { handleGetReviews, handleCreateReview } from '@/features/products/reviews/index.server'
 
 export const GET = handleGetReviews
 export const POST = handleCreateReview
@@ -764,7 +764,7 @@ import {
   handleGetReview,
   handleUpdateReview,
   handleDeleteReview
-} from '@/features/products/reviews'
+} from '@/features/products/reviews/index.server'
 
 export const GET = handleGetReview
 export const PATCH = handleUpdateReview
@@ -815,7 +815,7 @@ export const handleAddOrderItem = _handleAddOrderItem
 
 ```typescript
 // src/app/api/users/[userId]/orders/[orderId]/items/route.ts
-import { handleGetOrderItems, handleAddOrderItem } from '@/features/orders/items'
+import { handleGetOrderItems, handleAddOrderItem } from '@/features/orders/items/index.server'
 
 export const GET = handleGetOrderItems
 export const POST = handleAddOrderItem
@@ -1066,7 +1066,7 @@ export const handleGetProducts = _handleGetProducts
 
 ```typescript
 // src/app/api/products/route.ts
-import { handleGetProducts } from '@/features/products'
+import { handleGetProducts } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 ```
@@ -1109,7 +1109,7 @@ export const handleCreateProduct = _handleCreateProduct
 
 ```typescript
 // src/app/api/products/route.ts
-import { handleCreateProduct } from '@/features/products'
+import { handleCreateProduct } from '@/features/products/index.server'
 
 export const POST = handleCreateProduct
 ```
@@ -1149,7 +1149,7 @@ export const handleGetMyProfile = _handleGetMyProfile
 
 ```typescript
 // src/app/api/profile/route.ts
-import { handleGetMyProfile } from '@/features/users'
+import { handleGetMyProfile } from '@/features/users/index.server'
 
 export const GET = handleGetMyProfile
 ```
@@ -1194,7 +1194,7 @@ export const handleGetProduct = _handleGetProduct
 
 ```typescript
 // src/app/api/products/[id]/route.ts
-import { handleGetProduct } from '@/features/products'
+import { handleGetProduct } from '@/features/products/index.server'
 
 export const GET = handleGetProduct
 ```
@@ -1215,7 +1215,7 @@ API Routeは薄いエントリーポイントとして、Handler関数を呼び�
 ```typescript
 // ✅ 推奨
 // src/app/api/products/route.ts
-import { handleGetProducts, handleCreateProduct } from '@/features/products'
+import { handleGetProducts, handleCreateProduct } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 export const POST = handleCreateProduct
@@ -1353,7 +1353,7 @@ export const handleGetProducts = withHTTPError(async (request) => {
 })
 
 // src/app/api/products/route.ts
-import { handleGetProducts } from '@/features/products'
+import { handleGetProducts } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 ```

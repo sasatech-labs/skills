@@ -1,5 +1,5 @@
 ---
-name: Feature-Based Layered Architecture
+name: Feature-Based-Layered-Architecture
 description: Feature-Based Layered Architecture for Next.js (App Router) with Supabase. Use when creating API routes, services, repositories, or components with TypeScript. Covers Handler/Service/Repository/Adapter layers, Zod validation, and feature module structure.
 ---
 
@@ -79,7 +79,8 @@ src/
 │
 ├── features/                 # 機能単位のモジュール
 │   └── [feature]/
-│       ├── index.ts          # 公開API
+│       ├── index.server.ts   # サーバー専用の公開API（Service, Handler）
+│       ├── index.client.ts   # クライアント利用可の公開API（Fetcher, 型）
 │       └── core/
 │           ├── schema.ts     # Zodスキーマ + 型定義
 │           ├── handler.ts    # リクエスト / レスポンス処理 (server-only)
@@ -158,7 +159,7 @@ Impact は、違反時にアーキテクチャへ与える影響の深刻度で�
 | [arch-fetch-strategy](rules/arch-fetch-strategy.md) | CRITICAL | SSR/CSR問わず、fetcher経由でAPI Route呼び出し |
 | [arch-logging-levels](rules/arch-logging-levels.md) | MEDIUM | ログレベルをレイヤーと状況に応じて使い分け |
 | [arch-auth-strategy](rules/arch-auth-strategy.md) | HIGH | Handler層で楽観的認証、Service層で厳密な認可。共有ヘルパー関数禁止 |
-| [arch-public-api](rules/arch-public-api.md) | MEDIUM | Feature の index.ts は公開API（Service関数、Handler関数、Fetcher関数、型）のみexport |
+| [arch-public-api](rules/arch-public-api.md) | MEDIUM | Feature の公開APIは index.server.ts（Service, Handler）と index.client.ts（Fetcher, 型）で分離管理 |
 | [arch-handler-route-separation](rules/arch-handler-route-separation.md) | HIGH | API Routeは薄いエントリーポイントに限定、ロジックはHandler層に分離 |
 | [arch-no-direct-layer-exports](rules/arch-no-direct-layer-exports.md) | HIGH | Repository/Adapterの直接export禁止、Service関数経由で公開 |
 | [arch-adapter-via-service](rules/arch-adapter-via-service.md) | HIGH | Handler層からのAdapter直接呼び出し禁止、Service層経由必須 |

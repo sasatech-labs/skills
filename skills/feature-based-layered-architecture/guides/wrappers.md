@@ -290,7 +290,7 @@ export const handleDeleteProduct = withHTTPError(async (request, context) => {
 
 ```typescript
 // src/app/api/products/route.ts
-import { handleGetProducts, handleCreateProduct } from '@/features/products'
+import { handleGetProducts, handleCreateProduct } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 export const POST = handleCreateProduct
@@ -302,7 +302,7 @@ import {
   handleGetProduct,
   handleUpdateProduct,
   handleDeleteProduct,
-} from '@/features/products'
+} from '@/features/products/index.server'
 
 export const GET = handleGetProduct
 export const PATCH = handleUpdateProduct

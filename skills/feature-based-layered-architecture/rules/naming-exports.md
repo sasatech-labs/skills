@@ -166,7 +166,7 @@ export const handleStripeError = _handleStripeError
 
 ### バレルファイル
 
-re-exportのみのファイル（`index.ts`等）は、このルールの対象外とする。
+re-exportのみのファイル（`index.server.ts`、`index.client.ts`等）は、このルールの対象外とする。
 
 ```typescript
 // adapters/index.ts — バレルファイルはそのまま

@@ -9,7 +9,8 @@ src/
 ├── app/api/          # Handler層（リクエスト/レスポンス処理）
 ├── features/         # 機能単位のモジュール
 │   └── [feature]/
-│       ├── index.ts       # 公開API
+│       ├── index.server.ts   # サーバー専用の公開API（Service, Handler）
+│       ├── index.client.ts   # クライアント利用可の公開API（Fetcher, 型）
 │       ├── core/
 │       │   ├── schema.ts      # Zodスキーマ + 型定義
 │       │   ├── service.ts     # server-only
@@ -158,7 +159,7 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 ### route.ts (API Route)
 
 ```typescript
-import { handleGetProducts, handleCreateProduct } from '@/features/products'
+import { handleGetProducts, handleCreateProduct } from '@/features/products/index.server'
 
 export const GET = handleGetProducts
 export const POST = handleCreateProduct
