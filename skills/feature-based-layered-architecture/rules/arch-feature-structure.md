@@ -10,25 +10,16 @@ tags: [architecture, feature, module, directory-structure]
 
 機能ごとに`features/`ディレクトリにモジュールを作成し、公開APIを`index.server.ts`と`index.client.ts`で制御する。
 
-## NG例
+## 理由
 
-機能が分散し、関連ファイルの把握が困難になる。
+Feature単位のモジュール構成はアーキテクチャの根幹である。違反すると設計パターン自体が成立しない。
 
-```text
-src/
-├── services/
-│   ├── product-service.ts    # 製品のビジネスロジックが分散
-│   └── user-service.ts
-├── repositories/
-│   ├── product-repository.ts  # 製品のデータアクセス層が分散
-│   └── user-repository.ts
-├── schemas/
-│   ├── product-schema.ts      # 製品のスキーマが分散
-│   └── user-schema.ts
-└── types/
-    ├── product-types.ts       # 製品の型定義が分散
-    └── user-types.ts
-```
+機能ごとにファイルを集約することで以下の利点がある:
+
+- 関連するコードが同じディレクトリにあり、把握しやすい
+- 機能の追加や削除が容易になる
+- `index.server.ts`/`index.client.ts`による公開API制御で、内部実装の詳細を隠蔽できる
+- 機能間の依存関係が明確になる
 
 ## OK例
 
@@ -54,16 +45,25 @@ src/features/
     └── repository.ts         # ユーザーのデータアクセス層
 ```
 
-## 理由
+## NG例
 
-Feature単位のモジュール構成はアーキテクチャの根幹である。違反すると設計パターン自体が成立しない。
+機能が分散し、関連ファイルの把握が困難になる。
 
-機能ごとにファイルを集約することで以下の利点がある:
-
-- 関連するコードが同じディレクトリにあり、把握しやすい
-- 機能の追加や削除が容易になる
-- `index.server.ts`/`index.client.ts`による公開API制御で、内部実装の詳細を隠蔽できる
-- 機能間の依存関係が明確になる
+```text
+src/
+├── services/
+│   ├── product-service.ts    # 製品のビジネスロジックが分散
+│   └── user-service.ts
+├── repositories/
+│   ├── product-repository.ts  # 製品のデータアクセス層が分散
+│   └── user-repository.ts
+├── schemas/
+│   ├── product-schema.ts      # 製品のスキーマが分散
+│   └── user-schema.ts
+└── types/
+    ├── product-types.ts       # 製品の型定義が分散
+    └── user-types.ts
+```
 
 ## 詳細
 

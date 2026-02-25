@@ -10,38 +10,13 @@ tags: [logging, pino, log-levels, observability]
 
 ログレベルはレイヤーと状況に応じて使い分ける。ループ内での`info`は禁止、成功時の詳細は`debug`を使用する。
 
-## NG例
+## 理由
 
-### すべてinfoで出力
+ログレベルを適切に使い分けることで、以下の効果がある：
 
-```typescript
-// src/features/products/core/service.ts
-export async function getProducts(supabase: SupabaseClient) {
-  // NG: 詳細な処理情報をinfoで出力している
-  logger.info({ layer: 'service' }, 'Getting products')
-
-  const products = await productRepository.findMany(supabase)
-
-  // NG: 成功時の詳細はdebugで出力する
-  logger.info({ layer: 'service', count: products.length }, 'Products fetched')
-
-  return products
-}
-```
-
-### ループ内でinfoログ
-
-```typescript
-// src/features/orders/core/service.ts
-export async function processOrders(supabase: SupabaseClient, orders: Order[]) {
-  for (const order of orders) {
-    // NG: ループ内でinfoログを出力するとログが大量に生成される
-    logger.info({ orderId: order.id }, 'Processing order')
-    await processOrder(supabase, order)
-    logger.info({ orderId: order.id }, 'Order processed')
-  }
-}
-```
+1. **本番環境のノイズ低減**: debugログは本番では出力されないため、重要なログが埋もれない
+2. **パフォーマンスの維持**: ループ内のinfoログは大量のI/Oを発生させ、処理速度を低下させる
+3. **障害調査の効率化**: レベルが適切であれば、infoログだけで重要な操作の流れを把握でき、debugに切り替えることで詳細を確認できる
 
 ## OK例
 
@@ -93,13 +68,38 @@ export async function processOrders(supabase: SupabaseClient, orders: Order[]) {
 }
 ```
 
-## 理由
+## NG例
 
-ログレベルを適切に使い分けることで、以下の効果がある：
+### すべてinfoで出力
 
-1. **本番環境のノイズ低減**: debugログは本番では出力されないため、重要なログが埋もれない
-2. **パフォーマンスの維持**: ループ内のinfoログは大量のI/Oを発生させ、処理速度を低下させる
-3. **障害調査の効率化**: レベルが適切であれば、infoログだけで重要な操作の流れを把握でき、debugに切り替えることで詳細を確認できる
+```typescript
+// src/features/products/core/service.ts
+export async function getProducts(supabase: SupabaseClient) {
+  // NG: 詳細な処理情報をinfoで出力している
+  logger.info({ layer: 'service' }, 'Getting products')
+
+  const products = await productRepository.findMany(supabase)
+
+  // NG: 成功時の詳細はdebugで出力する
+  logger.info({ layer: 'service', count: products.length }, 'Products fetched')
+
+  return products
+}
+```
+
+### ループ内でinfoログ
+
+```typescript
+// src/features/orders/core/service.ts
+export async function processOrders(supabase: SupabaseClient, orders: Order[]) {
+  for (const order of orders) {
+    // NG: ループ内でinfoログを出力するとログが大量に生成される
+    logger.info({ orderId: order.id }, 'Processing order')
+    await processOrder(supabase, order)
+    logger.info({ orderId: order.id }, 'Order processed')
+  }
+}
+```
 
 ## レベル別ガイドライン
 

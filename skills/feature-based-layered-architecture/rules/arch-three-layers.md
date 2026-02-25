@@ -10,62 +10,26 @@ tags: [architecture, layers, handler, service, repository, adapter]
 
 アプリケーションは Handler → Service → Repository / Adapter の層構成を経由する。SSR/CSR問わず、fetcher → API Route → Handler → Service → Repository / Adapter の経路でデータを取得する。各層の責務を明確に分離し、レイヤーをスキップしない。
 
-## NG例
+## 理由
 
-### Handler層のスキップ
+レイヤードアーキテクチャを採用する理由は以下の通りである：
 
-```typescript
-// NG: API Route内で直接Supabaseにアクセスしている
-// src/app/api/products/route.ts
-export async function GET(request: NextRequest) {
-  const supabase = await createClient()
+1. **責務の明確化**: 各層が単一の責務を持つことで、コードの理解と保守が容易になる
+2. **テスタビリティ**: 各層を独立してテストできる
+3. **変更の局所化**: データソースの変更はRepository層のみ、ビジネスロジックの変更はService層のみに影響
+4. **再利用性**: Serviceは複数のHandlerから呼び出し可能。SSR/CSR両パスから同じfetcher → API Route → Handler → Serviceの経路を使用する
 
-  // 問題: Handler/Service/Repository層を経由していない
-  const { data } = await supabase.from('products').select('*')
+各層の責務は以下の通り：
 
-  return NextResponse.json(data)
-}
-```
+| 層 | ファイル | 責務 |
+|---|---------|------|
+| API Route | `app/api/*/route.ts` | 薄いエントリーポイント（Handler関数を呼び出すだけ） |
+| Handler | `features/*/core/handler.ts` | リクエスト/レスポンス処理、バリデーション、楽観的認証 |
+| Service | `features/*/core/service.ts` | ビジネスロジック、厳密な認可、Repository/Adapterの連携 |
+| Repository | `features/*/core/repository.ts` | データアクセス、Supabaseクエリ |
+| Adapter | `features/*/core/adapter.ts` | 外部API連携（Stripe, Resend等）。Repositoryと同階層 |
 
-### Service層のスキップ
-
-```typescript
-// NG: Handler層からRepositoryを直接呼び出している
-// src/features/products/core/handler.ts
-export const handleGetProducts = withHTTPError(async (request) => {
-  const supabase = await createClient()
-  // 問題: Service層をバイパスしてRepositoryを直接使用している
-  const products = await productRepository.findMany(supabase)
-  return AppResponse.ok(products)
-})
-```
-
-```typescript
-// NG: Handler層からAdapterを直接呼び出している
-// src/features/payments/core/handler.ts
-export const handleCreatePayment = withHTTPError(async (request) => {
-  const body = await request.json()
-  const input = paymentSchema.parse(body)
-  // 問題: Service層をバイパスしてAdapterを直接使用している
-  const paymentIntent = await stripeAdapter.createPaymentIntent({
-    amount: input.amount,
-    currency: 'jpy',
-  })
-  return AppResponse.ok(paymentIntent)
-})
-```
-
-### Repository層のスキップ
-
-```typescript
-// NG: Service層からSupabaseに直接アクセスしている
-// src/features/products/core/service.ts
-export async function getProducts(supabase: SupabaseClient) {
-  // 問題: Repository層を経由せずに直接DBアクセスを行っている
-  const { data } = await supabase.from('products').select('*')
-  return data
-}
-```
+違反すると、責務分離が崩壊し、アーキテクチャパターン自体が成立しない。
 
 ## OK例
 
@@ -191,26 +155,62 @@ export const stripeAdapter = {
 }
 ```
 
-## 理由
+## NG例
 
-レイヤードアーキテクチャを採用する理由は以下の通りである：
+### Handler層のスキップ
 
-1. **責務の明確化**: 各層が単一の責務を持つことで、コードの理解と保守が容易になる
-2. **テスタビリティ**: 各層を独立してテストできる
-3. **変更の局所化**: データソースの変更はRepository層のみ、ビジネスロジックの変更はService層のみに影響
-4. **再利用性**: Serviceは複数のHandlerから呼び出し可能。SSR/CSR両パスから同じfetcher → API Route → Handler → Serviceの経路を使用する
+```typescript
+// NG: API Route内で直接Supabaseにアクセスしている
+// src/app/api/products/route.ts
+export async function GET(request: NextRequest) {
+  const supabase = await createClient()
 
-各層の責務は以下の通り：
+  // 問題: Handler/Service/Repository層を経由していない
+  const { data } = await supabase.from('products').select('*')
 
-| 層 | ファイル | 責務 |
-|---|---------|------|
-| API Route | `app/api/*/route.ts` | 薄いエントリーポイント（Handler関数を呼び出すだけ） |
-| Handler | `features/*/core/handler.ts` | リクエスト/レスポンス処理、バリデーション、楽観的認証 |
-| Service | `features/*/core/service.ts` | ビジネスロジック、厳密な認可、Repository/Adapterの連携 |
-| Repository | `features/*/core/repository.ts` | データアクセス、Supabaseクエリ |
-| Adapter | `features/*/core/adapter.ts` | 外部API連携（Stripe, Resend等）。Repositoryと同階層 |
+  return NextResponse.json(data)
+}
+```
 
-違反すると、責務分離が崩壊し、アーキテクチャパターン自体が成立しない。
+### Service層のスキップ
+
+```typescript
+// NG: Handler層からRepositoryを直接呼び出している
+// src/features/products/core/handler.ts
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  // 問題: Service層をバイパスしてRepositoryを直接使用している
+  const products = await productRepository.findMany(supabase)
+  return AppResponse.ok(products)
+})
+```
+
+```typescript
+// NG: Handler層からAdapterを直接呼び出している
+// src/features/payments/core/handler.ts
+export const handleCreatePayment = withHTTPError(async (request) => {
+  const body = await request.json()
+  const input = paymentSchema.parse(body)
+  // 問題: Service層をバイパスしてAdapterを直接使用している
+  const paymentIntent = await stripeAdapter.createPaymentIntent({
+    amount: input.amount,
+    currency: 'jpy',
+  })
+  return AppResponse.ok(paymentIntent)
+})
+```
+
+### Repository層のスキップ
+
+```typescript
+// NG: Service層からSupabaseに直接アクセスしている
+// src/features/products/core/service.ts
+export async function getProducts(supabase: SupabaseClient) {
+  // 問題: Repository層を経由せずに直接DBアクセスを行っている
+  const { data } = await supabase.from('products').select('*')
+  return data
+}
+```
 
 ## 例外
 

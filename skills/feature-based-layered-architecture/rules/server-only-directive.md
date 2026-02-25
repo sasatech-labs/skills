@@ -10,18 +10,11 @@ tags: [server, security, next-js, bundling]
 
 Handler層、Service層、Repository層、Adapter層のファイルには必ず `import 'server-only'` を記述する。
 
-## NG例
+## 理由
 
-```typescript
-// src/features/products/service.ts
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { productRepository } from './repository'
+`server-only`を記述することで、サーバー専用コードのクライアントバンドルへの混入を防ぐ。`server-only`をインポートしたファイルをクライアントコンポーネントからインポートすると、ビルド時にエラーが発生する。これにより、機密情報の漏洩やバンドルサイズの肥大化を防止できる。
 
-// NG: server-onlyがないため、このファイルがクライアントにバンドルされる可能性がある
-export async function getProducts(supabase: SupabaseClient) {
-  return productRepository.findMany(supabase)
-}
-```
+Handler、Service、Repository、Adapterの各層はサーバーサイドでのみ実行されるべきロジックを含む。server-onlyを欠如させると、サーバー専用コードがクライアントに混入し、整合性を大きく損なう。
 
 ## OK例
 
@@ -70,11 +63,18 @@ export const stripeAdapter = {
 }
 ```
 
-## 理由
+## NG例
 
-`server-only`を記述することで、サーバー専用コードのクライアントバンドルへの混入を防ぐ。`server-only`をインポートしたファイルをクライアントコンポーネントからインポートすると、ビルド時にエラーが発生する。これにより、機密情報の漏洩やバンドルサイズの肥大化を防止できる。
+```typescript
+// src/features/products/service.ts
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { productRepository } from './repository'
 
-Handler、Service、Repository、Adapterの各層はサーバーサイドでのみ実行されるべきロジックを含む。server-onlyを欠如させると、サーバー専用コードがクライアントに混入し、整合性を大きく損なう。
+// NG: server-onlyがないため、このファイルがクライアントにバンドルされる可能性がある
+export async function getProducts(supabase: SupabaseClient) {
+  return productRepository.findMany(supabase)
+}
+```
 
 ## 対象ファイル
 

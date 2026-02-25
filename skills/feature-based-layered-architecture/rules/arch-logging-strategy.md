@@ -10,22 +10,16 @@ tags: [logging, pino, observability, debugging]
 
 pinoを使用して構造化ログを出力する。`console.log`は使用しない。
 
-## NG例
+## 理由
 
-```typescript
-// Handler
-export async function POST(request: NextRequest) {
-  try {
-    console.log('Creating product')  // NG: 構造化されていない
-    const product = await createProduct(supabase, input)
-    console.log('Product created:', product.id)  // NG: レベル制御できない
-    return AppResponse.created(product)
-  } catch (error) {
-    console.error('Error:', error)  // NG: コンテキストが不足
-    return AppResponse.serverError()
-  }
-}
-```
+構造化ログを使用する理由は以下の通りである：
+
+1. **検索性の向上**: JSONフォーマットにより、ログ収集サービスで効率的にフィルタリング・検索できる
+2. **一貫性の確保**: 全てのログに`requestId`や`layer`などの共通フィールドを含めることで、リクエスト全体を追跡できる
+3. **レベル制御**: 環境変数でログレベルを制御し、開発環境では詳細ログ、本番環境では必要最小限のログを出力できる
+4. **監視との連携**: 構造化されたログは、監視ツールやアラートシステムと連携しやすい
+
+`console.log`を使用した場合、これらのメリットが失われ、デバッグや障害調査の効率が大幅に低下する。
 
 ## OK例
 
@@ -53,16 +47,22 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-## 理由
+## NG例
 
-構造化ログを使用する理由は以下の通りである：
-
-1. **検索性の向上**: JSONフォーマットにより、ログ収集サービスで効率的にフィルタリング・検索できる
-2. **一貫性の確保**: 全てのログに`requestId`や`layer`などの共通フィールドを含めることで、リクエスト全体を追跡できる
-3. **レベル制御**: 環境変数でログレベルを制御し、開発環境では詳細ログ、本番環境では必要最小限のログを出力できる
-4. **監視との連携**: 構造化されたログは、監視ツールやアラートシステムと連携しやすい
-
-`console.log`を使用した場合、これらのメリットが失われ、デバッグや障害調査の効率が大幅に低下する。
+```typescript
+// Handler
+export async function POST(request: NextRequest) {
+  try {
+    console.log('Creating product')  // NG: 構造化されていない
+    const product = await createProduct(supabase, input)
+    console.log('Product created:', product.id)  // NG: レベル制御できない
+    return AppResponse.created(product)
+  } catch (error) {
+    console.error('Error:', error)  // NG: コンテキストが不足
+    return AppResponse.serverError()
+  }
+}
+```
 
 ## ログレベルの使い分け
 

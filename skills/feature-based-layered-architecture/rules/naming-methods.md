@@ -10,29 +10,14 @@ tags: [naming, methods, repository, service]
 
 RepositoryとServiceのメソッド名は、用途に応じた動詞で統一する。Repositoryは`find*`/`create`/`update`/`delete`パターンを使用し、Serviceは`get*`/`create*`/`update*`/`delete*`パターンを使用する。
 
-## NG例
+## 理由
 
-```typescript
-// NG: Repository で get プレフィックスを使用
-export const productRepository = {
-  async getAll(supabase): Promise<Product[]> { /* ... */ }, // findMany を使用すべき
-  async getById(supabase, id): Promise<Product | null> { /* ... */ }, // findById を使用すべき
-}
+メソッド命名の統一により、以下の利点がある：
 
-// NG: Service で find プレフィックスを使用
-export async function findProducts(supabase, options) { /* ... */ } // getProducts を使用すべき
-export async function findProductById(supabase, id) { /* ... */ } // getProductById を使用すべき
-
-// NG: ページネーションなしの全件取得
-export const productRepository = {
-  async findAll(supabase): Promise<Product[]> { /* ... */ }, // 使用禁止
-  async getAll(supabase): Promise<Product[]> { /* ... */ }, // 使用禁止
-}
-
-// NG: Hook で get プレフィックスを使用
-export function getProducts(page, limit) { /* ... */ } // useProducts を使用すべき
-export function getProduct(id) { /* ... */ } // useProduct を使用すべき
-```
+1. **一貫性の向上**: レイヤーごとに明確な命名パターンを持つことで、コードの可読性が向上する
+2. **レイヤーの識別**: メソッド名からどのレイヤーの処理か即座に判断できる（Repositoryは`find*`、Serviceは`get*`）
+3. **パターンの学習容易性**: 新規参加者が命名パターンを理解しやすくなる
+4. **ページネーションの強制**: `findAll`/`getAll`を禁止することで、大量データの取得時に必ずページネーションを考慮させる
 
 ## OK例
 
@@ -68,14 +53,29 @@ export function useUpdateProduct() { /* ... */ } // 更新ミューテーショ�
 export function useDeleteProduct() { /* ... */ } // 削除ミューテーション
 ```
 
-## 理由
+## NG例
 
-メソッド命名の統一により、以下の利点がある：
+```typescript
+// NG: Repository で get プレフィックスを使用
+export const productRepository = {
+  async getAll(supabase): Promise<Product[]> { /* ... */ }, // findMany を使用すべき
+  async getById(supabase, id): Promise<Product | null> { /* ... */ }, // findById を使用すべき
+}
 
-1. **一貫性の向上**: レイヤーごとに明確な命名パターンを持つことで、コードの可読性が向上する
-2. **レイヤーの識別**: メソッド名からどのレイヤーの処理か即座に判断できる（Repositoryは`find*`、Serviceは`get*`）
-3. **パターンの学習容易性**: 新規参加者が命名パターンを理解しやすくなる
-4. **ページネーションの強制**: `findAll`/`getAll`を禁止することで、大量データの取得時に必ずページネーションを考慮させる
+// NG: Service で find プレフィックスを使用
+export async function findProducts(supabase, options) { /* ... */ } // getProducts を使用すべき
+export async function findProductById(supabase, id) { /* ... */ } // getProductById を使用すべき
+
+// NG: ページネーションなしの全件取得
+export const productRepository = {
+  async findAll(supabase): Promise<Product[]> { /* ... */ }, // 使用禁止
+  async getAll(supabase): Promise<Product[]> { /* ... */ }, // 使用禁止
+}
+
+// NG: Hook で get プレフィックスを使用
+export function getProducts(page, limit) { /* ... */ } // useProducts を使用すべき
+export function getProduct(id) { /* ... */ } // useProduct を使用すべき
+```
 
 ## 参考: 命名パターン一覧
 

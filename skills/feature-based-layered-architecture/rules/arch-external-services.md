@@ -10,25 +10,15 @@ tags: [architecture, adapter, external-api, stripe, resend]
 
 外部サービス（Stripe、Resend、OpenAI など）への依存は `lib/adapters/` に配置し、Service 層から利用する。
 
-## NG例
+## 理由
 
-**Service で直接 SDK を使用、依存が密結合:**
+外部API依存を直接 Service 層に書くと、以下の問題が発生する：
 
-```typescript
-// src/features/payments/core/service.ts
-import 'server-only'
-import Stripe from 'stripe'
+- **密結合**: 外部サービスの仕様変更がアプリケーション全体に波及する
+- **テスト困難**: Service テストで外部APIをモックする必要があり、テストが複雑になる
+- **保守性低下**: 同じ外部API呼び出しが複数箇所に散在し、変更時の影響範囲が大きい
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-
-export async function createPaymentIntent(amount: number) {
-  // Service で直接 Stripe を使用
-  return stripe.paymentIntents.create({
-    amount,
-    currency: 'jpy',
-  })
-}
-```
+Adapter パターンで外部依存を隔離することで、整合性と保守性を確保する。
 
 ## OK例
 
@@ -73,15 +63,25 @@ export async function createPaymentIntent(amount: number) {
 }
 ```
 
-## 理由
+## NG例
 
-外部API依存を直接 Service 層に書くと、以下の問題が発生する：
+**Service で直接 SDK を使用、依存が密結合:**
 
-- **密結合**: 外部サービスの仕様変更がアプリケーション全体に波及する
-- **テスト困難**: Service テストで外部APIをモックする必要があり、テストが複雑になる
-- **保守性低下**: 同じ外部API呼び出しが複数箇所に散在し、変更時の影響範囲が大きい
+```typescript
+// src/features/payments/core/service.ts
+import 'server-only'
+import Stripe from 'stripe'
 
-Adapter パターンで外部依存を隔離することで、整合性と保守性を確保する。
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+
+export async function createPaymentIntent(amount: number) {
+  // Service で直接 Stripe を使用
+  return stripe.paymentIntents.create({
+    amount,
+    currency: 'jpy',
+  })
+}
+```
 
 ## Adapter の責務
 

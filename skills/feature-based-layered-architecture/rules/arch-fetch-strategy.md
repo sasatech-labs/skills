@@ -10,38 +10,20 @@ tags: [architecture, ssr, csr, data-fetching, server-components]
 
 SSR/CSR問わず、fetcher.ts経由でAPI Routeを呼び出す。Server ComponentからService層を直接呼び出さない。
 
-## NG例
+## 判定基準
 
-### Server ComponentからService直接呼び出し
+| 条件 | 戦略 | 経路 |
+|------|------|------|
+| ページ表示時点でデータが確定する | SSR | page.tsx → fetcher.ts → route.ts → handler.ts → service.ts |
+| ユーザー操作に応じてデータが変化する | CSR | hooks.ts → fetcher.ts → route.ts → handler.ts → service.ts |
 
-```typescript
-// src/app/(auth)/products/[id]/page.tsx
-import { getProduct } from '@/features/products/index.server'
-import { createClient } from '@/lib/supabase/server'
+## 理由
 
-// NG: Server ComponentからService層を直接呼び出している
-export default async function ProductPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const product = await getProduct(supabase, params.id)
+SSRとCSRでデータ取得経路を統一する理由は以下の通りである：
 
-  return <ProductDetail product={product} />
-}
-```
-
-### Server ComponentからHandler関数を呼び出す
-
-```typescript
-// src/app/(auth)/products/[id]/page.tsx
-import { handleGetProduct } from '@/features/products/index.server'
-
-// NG: Server ComponentからHandler関数を呼び出している
-export default async function ProductPage({ params }: { params: { id: string } }) {
-  const response = await handleGetProduct(params.id)
-  const product = await response.json()
-
-  return <ProductDetail product={product} />
-}
-```
+1. **経路の統一**: SSR/CSR共通でfetcher → API Route → Handler → Serviceの経路を使用する。データフローが一貫し、理解しやすい
+2. **Handler層の一元化**: バリデーション、楽観的認証、エラーハンドリングがHandler層に集約される。Service層はビジネスロジックに専念する
+3. **API Routeの活用**: SSRでもAPI Routeを経由することで、すべてのデータアクセスがAPI Routeを通る。監視やログの一元化が容易になる
 
 ## OK例
 
@@ -91,20 +73,38 @@ export function useProduct(id: string) {
 }
 ```
 
-## 理由
+## NG例
 
-SSRとCSRでデータ取得経路を統一する理由は以下の通りである：
+### Server ComponentからService直接呼び出し
 
-1. **経路の統一**: SSR/CSR共通でfetcher → API Route → Handler → Serviceの経路を使用する。データフローが一貫し、理解しやすい
-2. **Handler層の一元化**: バリデーション、楽観的認証、エラーハンドリングがHandler層に集約される。Service層はビジネスロジックに専念する
-3. **API Routeの活用**: SSRでもAPI Routeを経由することで、すべてのデータアクセスがAPI Routeを通る。監視やログの一元化が容易になる
+```typescript
+// src/app/(auth)/products/[id]/page.tsx
+import { getProduct } from '@/features/products/index.server'
+import { createClient } from '@/lib/supabase/server'
 
-## 判定基準
+// NG: Server ComponentからService層を直接呼び出している
+export default async function ProductPage({ params }: { params: { id: string } }) {
+  const supabase = await createClient()
+  const product = await getProduct(supabase, params.id)
 
-| 条件 | 戦略 | 経路 |
-|------|------|------|
-| ページ表示時点でデータが確定する | SSR | page.tsx → fetcher.ts → route.ts → handler.ts → service.ts |
-| ユーザー操作に応じてデータが変化する | CSR | hooks.ts → fetcher.ts → route.ts → handler.ts → service.ts |
+  return <ProductDetail product={product} />
+}
+```
+
+### Server ComponentからHandler関数を呼び出す
+
+```typescript
+// src/app/(auth)/products/[id]/page.tsx
+import { handleGetProduct } from '@/features/products/index.server'
+
+// NG: Server ComponentからHandler関数を呼び出している
+export default async function ProductPage({ params }: { params: { id: string } }) {
+  const response = await handleGetProduct(params.id)
+  const product = await response.json()
+
+  return <ProductDetail product={product} />
+}
+```
 
 ## 参照
 

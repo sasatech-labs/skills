@@ -10,39 +10,24 @@ tags: [naming, exports, module, convention]
 
 すべてのexport対象（関数、定数、クラス、型）は `_` prefixの内部実装として定義し、ファイル末尾でまとめてexportする。バレルファイル（re-exportのみのファイル）は対象外とする。
 
-## NG例
+## 理由
 
-### インラインexport
+### exportの一覧性
 
-宣言と同時にexportする。
+ファイル末尾にexportを集約することで、そのモジュールの公開APIが一目で把握できる。コードレビューやリファクタリング時に、何がexportされているかをファイル末尾だけで確認できる。
 
-```typescript
-// NG: export が宣言に散在している
-export function ok<T>(data: T): NextResponse<T> {
-  return NextResponse.json(data)
-}
+### 内部実装と公開APIの分離
 
-export function created<T>(data: T): NextResponse<T> {
-  return NextResponse.json(data, { status: 201 })
-}
+`_` prefixにより、内部実装と公開APIの境界が明確になる。これにより以下の利点がある：
 
-export const logger: Logger = pino({ /* ... */ })
+1. **意図の明示**: `_` が付いている要素は内部実装、付いていない要素は公開API
+2. **リファクタリングの安全性**: 内部実装の変更が公開APIに影響しないことを構造的に保証する
+3. **命名の一貫性**: ファイル全体で統一されたパターンにより、認知負荷を軽減する
 
-export class AppError extends Error {
-  constructor(message: string, public readonly statusCode: number = 500) {
-    super(message)
-  }
-}
+### 違反時の影響
 
-export interface PaymentIntent {
-  id: string
-  amount: number
-}
-
-export type ValidationResult<T> =
-  | { success: true; data: T }
-  | { success: false; response: Response }
-```
+- exportがファイル全体に散在し、公開APIの把握が困難になる
+- 内部実装と公開APIの境界が曖昧になる
 
 ## OK例
 
@@ -143,24 +128,39 @@ function _handleStripeError(error: unknown): AppError {
 export const handleStripeError = _handleStripeError
 ```
 
-## 理由
+## NG例
 
-### exportの一覧性
+### インラインexport
 
-ファイル末尾にexportを集約することで、そのモジュールの公開APIが一目で把握できる。コードレビューやリファクタリング時に、何がexportされているかをファイル末尾だけで確認できる。
+宣言と同時にexportする。
 
-### 内部実装と公開APIの分離
+```typescript
+// NG: export が宣言に散在している
+export function ok<T>(data: T): NextResponse<T> {
+  return NextResponse.json(data)
+}
 
-`_` prefixにより、内部実装と公開APIの境界が明確になる。これにより以下の利点がある：
+export function created<T>(data: T): NextResponse<T> {
+  return NextResponse.json(data, { status: 201 })
+}
 
-1. **意図の明示**: `_` が付いている要素は内部実装、付いていない要素は公開API
-2. **リファクタリングの安全性**: 内部実装の変更が公開APIに影響しないことを構造的に保証する
-3. **命名の一貫性**: ファイル全体で統一されたパターンにより、認知負荷を軽減する
+export const logger: Logger = pino({ /* ... */ })
 
-### 違反時の影響
+export class AppError extends Error {
+  constructor(message: string, public readonly statusCode: number = 500) {
+    super(message)
+  }
+}
 
-- exportがファイル全体に散在し、公開APIの把握が困難になる
-- 内部実装と公開APIの境界が曖昧になる
+export interface PaymentIntent {
+  id: string
+  amount: number
+}
+
+export type ValidationResult<T> =
+  | { success: true; data: T }
+  | { success: false; response: Response }
+```
 
 ## 例外
 

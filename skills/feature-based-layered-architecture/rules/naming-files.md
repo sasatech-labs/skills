@@ -10,22 +10,22 @@ tags: [naming, files, directory, convention, kebab-case]
 
 すべてのファイル名・ディレクトリ名は **kebab-case** を使用する。
 
-## NG例
+## 理由
 
-PascalCase/snake_case/camelCase が混在する命名は避ける。
+### 一貫性の確保
 
-```plaintext
-# ディレクトリ名が統一されていない
-src/features/
-├── UserProfile/              # PascalCase - NG
-├── order_items/              # snake_case - NG
-└── productReviews/           # camelCase - NG
+ファイル名とディレクトリ名を kebab-case に統一することで、以下の利点がある。
 
-# ファイル名が統一されていない
-src/components/
-├── UserCard.tsx              # PascalCase - NG
-└── productList.tsx           # camelCase - NG
-```
+1. **可読性の向上**: プロジェクト全体で統一された命名規則により、ファイル検索とナビゲーションが容易になる
+2. **クロスプラットフォーム互換性**: macOS は大文字小文字を区別しない場合があるが、Linux は区別する。kebab-case の使用により、プラットフォーム間での問題を回避できる
+3. **URL との整合性**: Next.js のファイルベースルーティングでは、ファイル名が URL パスになる。kebab-case は URL の一般的な規約と一致する
+4. **開発体験の向上**: 混在したケーススタイル（PascalCase、snake_case、camelCase）を避けることで、チーム全体の認知負荷を軽減する
+
+### 違反時の影響
+
+- コードベース全体での一貫性が損なわれる
+- 新規メンバーが既存のパターンを理解しにくくなる
+- ファイル検索時に予測可能性が低下する
 
 ## OK例
 
@@ -110,22 +110,22 @@ export function ProductCard({ product }: ProductCardProps) {
 }
 ```
 
-## 理由
+## NG例
 
-### 一貫性の確保
+PascalCase/snake_case/camelCase が混在する命名は避ける。
 
-ファイル名とディレクトリ名を kebab-case に統一することで、以下の利点がある。
+```plaintext
+# ディレクトリ名が統一されていない
+src/features/
+├── UserProfile/              # PascalCase - NG
+├── order_items/              # snake_case - NG
+└── productReviews/           # camelCase - NG
 
-1. **可読性の向上**: プロジェクト全体で統一された命名規則により、ファイル検索とナビゲーションが容易になる
-2. **クロスプラットフォーム互換性**: macOS は大文字小文字を区別しない場合があるが、Linux は区別する。kebab-case の使用により、プラットフォーム間での問題を回避できる
-3. **URL との整合性**: Next.js のファイルベースルーティングでは、ファイル名が URL パスになる。kebab-case は URL の一般的な規約と一致する
-4. **開発体験の向上**: 混在したケーススタイル（PascalCase、snake_case、camelCase）を避けることで、チーム全体の認知負荷を軽減する
-
-### 違反時の影響
-
-- コードベース全体での一貫性が損なわれる
-- 新規メンバーが既存のパターンを理解しにくくなる
-- ファイル検索時に予測可能性が低下する
+# ファイル名が統一されていない
+src/components/
+├── UserCard.tsx              # PascalCase - NG
+└── productList.tsx           # camelCase - NG
+```
 
 ## 例外
 
@@ -173,4 +173,3 @@ src/app/
 ```
 
 角括弧内のパラメータ名（`id`、`slug` など）は、単一の単語を使用することを推奨する。複数単語が必要な場合は camelCase を使用する（例: `[userId]/`、`[postId]/`）。
-

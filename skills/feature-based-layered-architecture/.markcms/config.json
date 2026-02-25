@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "name": "feature-based-layered-architecture",
+  "contentTypes": [
+    {
+      "id": "guides",
+      "name": "rules",
+      "slug": "guides",
+      "folder": "rules",
+      "sortField": "impact",
+      "sortOrder": "desc",
+      "frontMatter": {
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true,
+            "default": "{{now}}"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          {
+            "name": "impact",
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          {
+            "name": "tag",
+            "type": "string[]",
+            "required": true,
+            "default": ""
+          }
+        ]
+      }
+    }
+  ]
+}

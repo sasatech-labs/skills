@@ -10,34 +10,15 @@ tags: [architecture, handler, api-route, layers]
 
 API Route（`app/api/`）はHandler関数を呼び出すだけの薄いエントリーポイントとする。API Route内にバリデーション、認証チェック、データベースアクセス、ビジネスロジックを記述しない。
 
-## NG例
+## 理由
 
-```typescript
-// src/app/api/products/route.ts
-// NG: API Route内にバリデーション、認証、DBアクセスを直接記述している
-import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+API RouteとHandler層を分離する理由は以下の通りである：
 
-export async function GET(request: NextRequest) {
-  const supabase = await createClient()
+1. **責務の分離**: API Routeはルーティングの定義のみを担当する。ロジックをHandler層に委譲することで、HTTP層とビジネス層の関心事が分離される
+2. **テスタビリティ**: Handler関数を独立した関数として定義することで、API Routeを経由せずにテストできる。API Routeに直接ロジックを記述すると、テストにHTTPリクエストのモックが必要になる
+3. **一貫性**: 全API RouteがHandler関数の呼び出しのみという統一パターンにより、コードベースの見通しが向上する
 
-  // NG: API Route内でクエリパラメータのパース
-  const { searchParams } = new URL(request.url)
-  const limit = Number(searchParams.get('limit') ?? '20')
-
-  // NG: API Route内で直接データベースアクセス
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .limit(limit)
-
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 })
-  }
-
-  return Response.json(data)
-}
-```
+違反すると、ロジックがAPI RouteとHandler層に分散し、テストと保守が困難になる。
 
 ## OK例
 
@@ -67,15 +48,34 @@ export const handleGetProducts = withHTTPError(async (request) => {
 })
 ```
 
-## 理由
+## NG例
 
-API RouteとHandler層を分離する理由は以下の通りである：
+```typescript
+// src/app/api/products/route.ts
+// NG: API Route内にバリデーション、認証、DBアクセスを直接記述している
+import { NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
-1. **責務の分離**: API Routeはルーティングの定義のみを担当する。ロジックをHandler層に委譲することで、HTTP層とビジネス層の関心事が分離される
-2. **テスタビリティ**: Handler関数を独立した関数として定義することで、API Routeを経由せずにテストできる。API Routeに直接ロジックを記述すると、テストにHTTPリクエストのモックが必要になる
-3. **一貫性**: 全API RouteがHandler関数の呼び出しのみという統一パターンにより、コードベースの見通しが向上する
+export async function GET(request: NextRequest) {
+  const supabase = await createClient()
 
-違反すると、ロジックがAPI RouteとHandler層に分散し、テストと保守が困難になる。
+  // NG: API Route内でクエリパラメータのパース
+  const { searchParams } = new URL(request.url)
+  const limit = Number(searchParams.get('limit') ?? '20')
+
+  // NG: API Route内で直接データベースアクセス
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .limit(limit)
+
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 })
+  }
+
+  return Response.json(data)
+}
+```
 
 ## 参照
 

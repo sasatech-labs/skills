@@ -10,49 +10,17 @@ tags: [frontend, fetcher, hooks, swr, client]
 
 Featureごとに`fetcher.ts`と`hooks.ts`を作成し、コンポーネントから直接`fetch`や`useState`+`useEffect`を使用しない。
 
-## NG例
+## 理由
 
-### コンポーネント内で直接fetch
+FetcherとSWR Hooksのパターンを使用しない場合、以下の問題が発生する：
 
-```typescript
-// src/features/products/components/product-list.tsx
-'use client'
+1. **API呼び出しの分散**: エラーハンドリングがコンポーネントごとに分散し、一貫性が失われる
+2. **URL管理の困難**: API URLの変更時に複数のコンポーネントを修正する必要がある
+3. **テスト容易性の低下**: API呼び出しのモック化が困難になる
+4. **キャッシュの欠如**: SWRの自動キャッシュ管理、重複排除、自動再検証が利用できない
+5. **コンポーネントの肥大化**: 状態管理ロジックがコンポーネントに混在し、表示に集中できない
 
-export function ProductList() {
-  const [products, setProducts] = useState([])
-
-  useEffect(() => {
-    // NG: コンポーネント内で直接fetch
-    fetch('/api/products')
-      .then((res) => res.json())
-      .then((data) => setProducts(data))
-  }, [])
-
-  // ...
-}
-```
-
-### useState/useEffectで状態管理
-
-```typescript
-// NG: コンポーネント内でuseState/useEffectによる複雑な状態管理
-export function ProductList() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  useEffect(() => {
-    setIsLoading(true)
-    productsFetcher.getAll()
-      .then(setProducts)
-      .catch(setError)
-      .finally(() => setIsLoading(false))
-  }, [])
-
-  // キャッシュ、重複排除、自動再検証が実装されていない
-  // ...
-}
-```
+FetcherでエラーハンドリングとAPI呼び出しを一元管理し、SWR Hooksで状態管理を分離することで、保守性とパフォーマンスが向上する。
 
 ## OK例
 
@@ -167,17 +135,49 @@ export function ProductList() {
 }
 ```
 
-## 理由
+## NG例
 
-FetcherとSWR Hooksのパターンを使用しない場合、以下の問題が発生する：
+### コンポーネント内で直接fetch
 
-1. **API呼び出しの分散**: エラーハンドリングがコンポーネントごとに分散し、一貫性が失われる
-2. **URL管理の困難**: API URLの変更時に複数のコンポーネントを修正する必要がある
-3. **テスト容易性の低下**: API呼び出しのモック化が困難になる
-4. **キャッシュの欠如**: SWRの自動キャッシュ管理、重複排除、自動再検証が利用できない
-5. **コンポーネントの肥大化**: 状態管理ロジックがコンポーネントに混在し、表示に集中できない
+```typescript
+// src/features/products/components/product-list.tsx
+'use client'
 
-FetcherでエラーハンドリングとAPI呼び出しを一元管理し、SWR Hooksで状態管理を分離することで、保守性とパフォーマンスが向上する。
+export function ProductList() {
+  const [products, setProducts] = useState([])
+
+  useEffect(() => {
+    // NG: コンポーネント内で直接fetch
+    fetch('/api/products')
+      .then((res) => res.json())
+      .then((data) => setProducts(data))
+  }, [])
+
+  // ...
+}
+```
+
+### useState/useEffectで状態管理
+
+```typescript
+// NG: コンポーネント内でuseState/useEffectによる複雑な状態管理
+export function ProductList() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    setIsLoading(true)
+    productsFetcher.getAll()
+      .then(setProducts)
+      .catch(setError)
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  // キャッシュ、重複排除、自動再検証が実装されていない
+  // ...
+}
+```
 
 ## 参考実装
 

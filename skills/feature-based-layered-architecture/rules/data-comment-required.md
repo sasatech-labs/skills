@@ -10,19 +10,18 @@ tags: [database, comment, documentation]
 
 すべてのテーブルとカラムに日本語のコメントを付ける。
 
-## NG例
+## 理由
 
-```sql
--- NG: コメントなしでテーブルを作成
-CREATE TABLE orders (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) NOT NULL,
-  total_amount integer NOT NULL,
-  status text DEFAULT 'pending' NOT NULL
-);
--- 問題: コメントがないため、カラムの意図や用途が不明確
--- 問題: Supabase Studioでスキーマを確認する際に説明が表示されない
-```
+データベースのコメントは以下の理由で重要である：
+
+- Supabase Studioでカラムの意図がすぐに確認できる
+- チームメンバーがスキーマを理解しやすくなる
+- コードとドキュメントの乖離を防ぐ
+
+違反時の影響：
+- カラムの用途や制約が不明確になり、開発効率が低下する
+- チーム間のコミュニケーションコストが増加する
+- スキーマの理解に時間がかかる
 
 ## OK例
 
@@ -55,18 +54,19 @@ COMMENT ON COLUMN orders.update_user IS '更新者のユーザーID';
 -- 推奨: 単位や取りうる値、参照先を明記することで理解しやすくなる
 ```
 
-## 理由
+## NG例
 
-データベースのコメントは以下の理由で重要である：
-
-- Supabase Studioでカラムの意図がすぐに確認できる
-- チームメンバーがスキーマを理解しやすくなる
-- コードとドキュメントの乖離を防ぐ
-
-違反時の影響：
-- カラムの用途や制約が不明確になり、開発効率が低下する
-- チーム間のコミュニケーションコストが増加する
-- スキーマの理解に時間がかかる
+```sql
+-- NG: コメントなしでテーブルを作成
+CREATE TABLE orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) NOT NULL,
+  total_amount integer NOT NULL,
+  status text DEFAULT 'pending' NOT NULL
+);
+-- 問題: コメントがないため、カラムの意図や用途が不明確
+-- 問題: Supabase Studioでスキーマを確認する際に説明が表示されない
+```
 
 ## 構文
 

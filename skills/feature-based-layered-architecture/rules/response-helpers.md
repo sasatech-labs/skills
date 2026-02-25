@@ -10,30 +10,16 @@ tags: [response, api, handler]
 
 Handler 層では直接 `NextResponse.json()` を使わず、レスポンスヘルパーを使用する。これによりレスポンス形式の統一と保守性を確保する。
 
-## NG例
+## 理由
 
-```typescript
-// src/features/products/core/handler.ts
-import 'server-only'
+レスポンスヘルパーを使用することで以下の利点がある：
 
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { withHTTPError } from '@/lib/with-http-error'
-import { getProducts, createProduct } from './service'
+1. **形式の統一**: すべてのAPIエンドポイントで同じレスポンス構造を保証する
+2. **保守性の向上**: レスポンス形式の変更が一箇所で完結する
+3. **可読性の向上**: `AppResponse.ok()`, `AppResponse.created()`, `AppResponse.notFound()` などのメソッド名が意図を明確にする
+4. **ステータスコードの統一**: HTTPステータスコードの指定方法が統一される
 
-// NG: 直接 NextResponse を使用すると形式が不統一になる
-export const handleGetProducts = withHTTPError(async (request) => {
-  const supabase = await createClient()
-  const products = await getProducts(supabase)
-  return NextResponse.json(products)
-})
-
-// NG: status の指定方法がハンドラごとに異なる可能性がある
-export const handleCreateProduct = withHTTPError(async (request) => {
-  // ...
-  return NextResponse.json(product, { status: 201 })
-})
-```
+違反した場合、レスポンス形式が不統一になり、フロントエンド側でのエラーハンドリングが複雑化する可能性がある。
 
 ## OK例
 
@@ -68,16 +54,30 @@ export const handleCreateProduct = withHTTPError(async (request) => {
 })
 ```
 
-## 理由
+## NG例
 
-レスポンスヘルパーを使用することで以下の利点がある：
+```typescript
+// src/features/products/core/handler.ts
+import 'server-only'
 
-1. **形式の統一**: すべてのAPIエンドポイントで同じレスポンス構造を保証する
-2. **保守性の向上**: レスポンス形式の変更が一箇所で完結する
-3. **可読性の向上**: `AppResponse.ok()`, `AppResponse.created()`, `AppResponse.notFound()` などのメソッド名が意図を明確にする
-4. **ステータスコードの統一**: HTTPステータスコードの指定方法が統一される
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { withHTTPError } from '@/lib/with-http-error'
+import { getProducts, createProduct } from './service'
 
-違反した場合、レスポンス形式が不統一になり、フロントエンド側でのエラーハンドリングが複雑化する可能性がある。
+// NG: 直接 NextResponse を使用すると形式が不統一になる
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return NextResponse.json(products)
+})
+
+// NG: status の指定方法がハンドラごとに異なる可能性がある
+export const handleCreateProduct = withHTTPError(async (request) => {
+  // ...
+  return NextResponse.json(product, { status: 201 })
+})
+```
 
 ## レスポンスヘルパー一覧
 

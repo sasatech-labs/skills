@@ -10,27 +10,13 @@ tags: [testing, mocking, layers]
 
 テスト対象レイヤーの直下の依存のみをモックする。レイヤーを跨いだモックは禁止。
 
-## NG例
+## 理由
 
-```typescript
-// Service のテストで Supabase を直接モック
-// Repository を飛び越えている
-import { getProducts } from '../core/service'
-import { createClient } from '@/lib/supabase/server'
+レイヤーを跨いだモックは、テストの独立性が崩壊し、3層構成の保守性を大きく損なう。
 
-vi.mock('@/lib/supabase/server')
-
-it('商品一覧を返す', async () => {
-  // NG: Service テストが Repository を経由せず Supabase を直接モック
-  vi.mocked(createClient).mockResolvedValue({
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockResolvedValue({ data: [...], error: null }),
-    }),
-  })
-
-  const result = await getProducts(mockSupabase)
-})
-```
+1. **テストの独立性** - 各レイヤーを独立して検証できる
+2. **保守性** - 下位レイヤーの実装変更がテストに影響しない
+3. **明確な責務** - 各テストが何を検証しているか明確になる
 
 ## OK例
 
@@ -61,13 +47,27 @@ it('商品一覧を返す', async () => {
 | Repository | Supabase Client | - |
 | Adapter | 外部APIクライアント | - |
 
-## 理由
+## NG例
 
-レイヤーを跨いだモックは、テストの独立性が崩壊し、3層構成の保守性を大きく損なう。
+```typescript
+// Service のテストで Supabase を直接モック
+// Repository を飛び越えている
+import { getProducts } from '../core/service'
+import { createClient } from '@/lib/supabase/server'
 
-1. **テストの独立性** - 各レイヤーを独立して検証できる
-2. **保守性** - 下位レイヤーの実装変更がテストに影響しない
-3. **明確な責務** - 各テストが何を検証しているか明確になる
+vi.mock('@/lib/supabase/server')
+
+it('商品一覧を返す', async () => {
+  // NG: Service テストが Repository を経由せず Supabase を直接モック
+  vi.mocked(createClient).mockResolvedValue({
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockResolvedValue({ data: [...], error: null }),
+    }),
+  })
+
+  const result = await getProducts(mockSupabase)
+})
+```
 
 ## 例外
 

@@ -10,34 +10,17 @@ tags: [validation, zod, handler, api]
 
 リクエストの入力値（ボディ、パスパラメータ、クエリパラメータ）はZodスキーマでバリデーションする。
 
-## NG例
+## 理由
 
-### ボディ未検証
+バリデーションを行わない場合、不正な入力値がそのまま処理される。これにより、以下の問題が発生する：
 
-```typescript
-// src/features/products/core/handler.ts
-export const handleCreateProduct = withHTTPError(async (request) => {
-  // NG: バリデーションなしで直接使用
-  const body = await request.json()
+1. **型安全性の欠如**: TypeScriptの型推論が機能せず、ランタイムエラーが発生する可能性がある
+2. **セキュリティリスク**: 不正なデータがDBに保存され、データの整合性が損なわれる
+3. **エラーハンドリングの複雑化**: バリデーションエラーと実行時エラーの区別が困難になる
+4. **一貫性の欠如**: APIレスポンスのエラー形式が統一されず、フロントエンドでの処理が複雑化する
+5. **不正なクエリの実行**: 未検証のパラメータがデータベースクエリに渡され、予期しない結果を招く
 
-  const supabase = await createClient()
-  const product = await createProduct(supabase, body)
-  return AppResponse.created(product)
-})
-```
-
-### パスパラメータ未検証
-
-```typescript
-// src/features/products/core/handler.ts
-export const handleGetProduct = withHTTPError(async (request, context) => {
-  const { id } = await context.params
-  // NG: バリデーションなしで直接使用
-  const supabase = await createClient()
-  const product = await getProduct(supabase, id)
-  return AppResponse.ok(product)
-})
-```
+Zodスキーマによるバリデーションを必須とすることで、型安全性とデータの整合性を保証し、コード品質を維持する。
 
 ## OK例
 
@@ -123,17 +106,34 @@ export const handleGetProducts = withHTTPError(async (request) => {
 })
 ```
 
-## 理由
+## NG例
 
-バリデーションを行わない場合、不正な入力値がそのまま処理される。これにより、以下の問題が発生する：
+### ボディ未検証
 
-1. **型安全性の欠如**: TypeScriptの型推論が機能せず、ランタイムエラーが発生する可能性がある
-2. **セキュリティリスク**: 不正なデータがDBに保存され、データの整合性が損なわれる
-3. **エラーハンドリングの複雑化**: バリデーションエラーと実行時エラーの区別が困難になる
-4. **一貫性の欠如**: APIレスポンスのエラー形式が統一されず、フロントエンドでの処理が複雑化する
-5. **不正なクエリの実行**: 未検証のパラメータがデータベースクエリに渡され、予期しない結果を招く
+```typescript
+// src/features/products/core/handler.ts
+export const handleCreateProduct = withHTTPError(async (request) => {
+  // NG: バリデーションなしで直接使用
+  const body = await request.json()
 
-Zodスキーマによるバリデーションを必須とすることで、型安全性とデータの整合性を保証し、コード品質を維持する。
+  const supabase = await createClient()
+  const product = await createProduct(supabase, body)
+  return AppResponse.created(product)
+})
+```
+
+### パスパラメータ未検証
+
+```typescript
+// src/features/products/core/handler.ts
+export const handleGetProduct = withHTTPError(async (request, context) => {
+  const { id } = await context.params
+  // NG: バリデーションなしで直接使用
+  const supabase = await createClient()
+  const product = await getProduct(supabase, id)
+  return AppResponse.ok(product)
+})
+```
 
 ## 参考実装
 

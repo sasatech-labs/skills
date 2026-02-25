@@ -10,30 +10,15 @@ tags: [server, security, webhook, signature, adapter]
 
 すべてのWebhookエンドポイントは、外部サービスの署名検証メカニズムを使用してリクエストの署名を検証する。署名検証なしでペイロードを直接パースすることを禁止する。
 
-## NG例
+## 理由
 
-```typescript
-// src/app/api/webhooks/stripe/route.ts
-// NG: 署名検証なしでペイロードを直接パースしている
-import { NextRequest, NextResponse } from 'next/server'
-import { orderService } from '@/features/orders/core/service'
+署名検証なしでWebhookイベントを処理すると、アプリケーションの信頼性とセキュリティが損なわれる：
 
-export async function POST(request: NextRequest) {
-  // NG: 署名ヘッダーを取得していない
-  // NG: Adapterの検証メソッドを使用していない
-  const payload = await request.text()
-  const event = JSON.parse(payload)
+1. **なりすまし防止**: 署名検証がない場合、任意のHTTPクライアントが偽のイベントを送信できる。未払いの注文を支払い済みとして処理するなど、不正なビジネスロジックの実行につながる
+2. **データ整合性**: 未検証のイベントはアプリケーションの状態を破壊する可能性がある。署名検証により、イベントが信頼できるサービスから送信されたことを保証する
+3. **セキュリティ標準**: Stripe、Resend、GitHubなどの主要な外部サービスはすべてWebhook署名を提供している。署名検証を使用しないことは、セキュリティのベストプラクティスに違反する
 
-  // NG: 未検証のイベントをそのまま処理している
-  switch (event.type) {
-    case 'checkout.session.completed':
-      await orderService.completeOrder(event.data.object)
-      break
-  }
-
-  return NextResponse.json({ received: true })
-}
-```
+署名検証の欠如は、決済処理やデータ同期に関わる重大なインシデントを引き起こす可能性がある。
 
 ## OK例
 
@@ -113,15 +98,30 @@ export const stripeAdapter = {
 }
 ```
 
-## 理由
+## NG例
 
-署名検証なしでWebhookイベントを処理すると、アプリケーションの信頼性とセキュリティが損なわれる：
+```typescript
+// src/app/api/webhooks/stripe/route.ts
+// NG: 署名検証なしでペイロードを直接パースしている
+import { NextRequest, NextResponse } from 'next/server'
+import { orderService } from '@/features/orders/core/service'
 
-1. **なりすまし防止**: 署名検証がない場合、任意のHTTPクライアントが偽のイベントを送信できる。未払いの注文を支払い済みとして処理するなど、不正なビジネスロジックの実行につながる
-2. **データ整合性**: 未検証のイベントはアプリケーションの状態を破壊する可能性がある。署名検証により、イベントが信頼できるサービスから送信されたことを保証する
-3. **セキュリティ標準**: Stripe、Resend、GitHubなどの主要な外部サービスはすべてWebhook署名を提供している。署名検証を使用しないことは、セキュリティのベストプラクティスに違反する
+export async function POST(request: NextRequest) {
+  // NG: 署名ヘッダーを取得していない
+  // NG: Adapterの検証メソッドを使用していない
+  const payload = await request.text()
+  const event = JSON.parse(payload)
 
-署名検証の欠如は、決済処理やデータ同期に関わる重大なインシデントを引き起こす可能性がある。
+  // NG: 未検証のイベントをそのまま処理している
+  switch (event.type) {
+    case 'checkout.session.completed':
+      await orderService.completeOrder(event.data.object)
+      break
+  }
+
+  return NextResponse.json({ received: true })
+}
+```
 
 ## 例外
 

@@ -10,31 +10,21 @@ tags: [server, security, supabase, architecture]
 
 クライアントコンポーネントから Supabaseを直接使用しない。必ず Repositoryを経由する。
 
-## NG例
+## 理由
 
-```typescript
-// src/features/products/components/product-list.tsx
-'use client'
+クライアントから Supabase への直接アクセスを禁止する理由は以下の通りである。
 
-import { createBrowserClient } from '@supabase/ssr'
+**セキュリティ**
+環境変数がクライアントに露出すると、データベースの接続情報が漏洩するリスクがある。API Route を経由することで、サーバーサイドのみが Supabase にアクセスし、認証情報を保護できる。
 
-export function ProductList() {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+**アーキテクチャの一貫性**
+3層構成（Handler → Service → Repository）を維持することで、責務の分離が明確になる。クライアントが直接データベースにアクセスすると、この設計パターンが成立しなくなる。
 
-  // NG: クライアントから直接 Supabase にアクセスしている
-  // NG: 環境変数がクライアントに露出する
-  // NG: サーバーサイドのバリデーションをバイパスしている
-  const fetchProducts = async () => {
-    const { data } = await supabase.from('products').select('*')
-    return data
-  }
+**バリデーション**
+API Route でリクエストを受け取ることで、サーバーサイドで入力検証を行える。クライアントからの直接アクセスでは、バリデーションをバイパスされる可能性がある。
 
-  // ...
-}
-```
+**ログとキャッシュ**
+サーバーサイドでリクエストを記録し、キャッシュ戦略を制御できる。これにより、パフォーマンスの最適化とデバッグが容易になる。
 
 ## OK例
 
@@ -97,21 +87,31 @@ export const productsFetcher = {
 }
 ```
 
-## 理由
+## NG例
 
-クライアントから Supabase への直接アクセスを禁止する理由は以下の通りである。
+```typescript
+// src/features/products/components/product-list.tsx
+'use client'
 
-**セキュリティ**
-環境変数がクライアントに露出すると、データベースの接続情報が漏洩するリスクがある。API Route を経由することで、サーバーサイドのみが Supabase にアクセスし、認証情報を保護できる。
+import { createBrowserClient } from '@supabase/ssr'
 
-**アーキテクチャの一貫性**
-3層構成（Handler → Service → Repository）を維持することで、責務の分離が明確になる。クライアントが直接データベースにアクセスすると、この設計パターンが成立しなくなる。
+export function ProductList() {
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
-**バリデーション**
-API Route でリクエストを受け取ることで、サーバーサイドで入力検証を行える。クライアントからの直接アクセスでは、バリデーションをバイパスされる可能性がある。
+  // NG: クライアントから直接 Supabase にアクセスしている
+  // NG: 環境変数がクライアントに露出する
+  // NG: サーバーサイドのバリデーションをバイパスしている
+  const fetchProducts = async () => {
+    const { data } = await supabase.from('products').select('*')
+    return data
+  }
 
-**ログとキャッシュ**
-サーバーサイドでリクエストを記録し、キャッシュ戦略を制御できる。これにより、パフォーマンスの最適化とデバッグが容易になる。
+  // ...
+}
+```
 
 ## 例外
 

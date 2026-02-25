@@ -10,23 +10,9 @@ tags: [testing, naming, readability]
 
 describe/itの記述は日本語で記述し、テストの意図を明確にする。実装詳細ではなく振る舞いを記述する。
 
-## NG例
+## 理由
 
-```typescript
-// 何をテストしているか分からない
-describe('getProducts', () => {
-  it('works', async () => {})
-  it('test1', async () => {})
-  it('should return', async () => {})
-})
-```
-
-```typescript
-// 実装詳細を記述
-describe('getProducts', () => {
-  it('calls productRepository.findMany with supabase', async () => {})
-})
-```
+テストの記述が曖昧だと、テストの意図や期待される振る舞いが不明確になる。実装詳細を記述すると、リファクタリング時にテストも変更が必要になり保守性が低下する。日本語で振る舞いを明確に記述することで、テストコードの可読性が向上し、チーム全体でのテスト理解が容易になる。違反した場合、テストの意図が伝わらず、テストの保守コストが増加する。
 
 ## OK例
 
@@ -48,9 +34,23 @@ describe('getProducts', () => {
 })
 ```
 
-## 理由
+## NG例
 
-テストの記述が曖昧だと、テストの意図や期待される振る舞いが不明確になる。実装詳細を記述すると、リファクタリング時にテストも変更が必要になり保守性が低下する。日本語で振る舞いを明確に記述することで、テストコードの可読性が向上し、チーム全体でのテスト理解が容易になる。違反した場合、テストの意図が伝わらず、テストの保守コストが増加する。
+```typescript
+// 何をテストしているか分からない
+describe('getProducts', () => {
+  it('works', async () => {})
+  it('test1', async () => {})
+  it('should return', async () => {})
+})
+```
+
+```typescript
+// 実装詳細を記述
+describe('getProducts', () => {
+  it('calls productRepository.findMany with supabase', async () => {})
+})
+```
 
 ## describe の構造
 

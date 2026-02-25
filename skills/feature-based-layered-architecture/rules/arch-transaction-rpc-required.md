@@ -10,34 +10,15 @@ tags: [architecture, transaction, rpc, supabase, database]
 
 複数のテーブルを更新する処理でデータの整合性が必要な場合、Supabase RPC関数を使用してデータベースレベルのトランザクションを実現する。アプリケーション側で複数のクエリを順次実行して整合性を保証しない。
 
-## NG例
+## 理由
 
-```typescript
-// src/features/transfers/core/service.ts
-import 'server-only'
+トランザクション処理にRPC関数を使用する理由は以下の通りである：
 
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { accountRepository } from '@/features/accounts/core/repository'
-import { transactionRepository } from './repository'
+1. **原子性の保証**: RPC関数はデータベースレベルのトランザクションで実行される。途中で失敗した場合、すべての変更が自動的にロールバックされる。アプリケーション側の順次実行では、途中失敗時にデータが不整合な状態になる
+2. **競合状態の防止**: `FOR UPDATE`による行ロックにより、同時アクセス時の競合を防止できる。アプリケーション側の実装では、読み取りと更新の間に他のリクエストが割り込む可能性がある
+3. **パフォーマンス**: 複数のクエリをアプリケーションから順次送信する場合、ネットワークラウンドトリップが発生する。RPC関数はデータベース内で完結するため、遅延が最小になる
 
-export async function transferMoney(
-  supabase: SupabaseClient,
-  fromAccountId: string,
-  toAccountId: string,
-  amount: number
-) {
-  // NG: 複数のクエリを順次実行している
-  // 途中で失敗すると、データが不整合な状態になる
-  await accountRepository.decreaseBalance(supabase, fromAccountId, amount)
-  await accountRepository.increaseBalance(supabase, toAccountId, amount)
-  await transactionRepository.create(supabase, {
-    fromAccountId,
-    toAccountId,
-    amount,
-    status: 'completed',
-  })
-}
-```
+違反すると、部分的な更新によるデータ不整合や、競合状態による二重処理が発生する。
 
 ## OK例
 
@@ -129,15 +110,34 @@ end;
 $$;
 ```
 
-## 理由
+## NG例
 
-トランザクション処理にRPC関数を使用する理由は以下の通りである：
+```typescript
+// src/features/transfers/core/service.ts
+import 'server-only'
 
-1. **原子性の保証**: RPC関数はデータベースレベルのトランザクションで実行される。途中で失敗した場合、すべての変更が自動的にロールバックされる。アプリケーション側の順次実行では、途中失敗時にデータが不整合な状態になる
-2. **競合状態の防止**: `FOR UPDATE`による行ロックにより、同時アクセス時の競合を防止できる。アプリケーション側の実装では、読み取りと更新の間に他のリクエストが割り込む可能性がある
-3. **パフォーマンス**: 複数のクエリをアプリケーションから順次送信する場合、ネットワークラウンドトリップが発生する。RPC関数はデータベース内で完結するため、遅延が最小になる
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { accountRepository } from '@/features/accounts/core/repository'
+import { transactionRepository } from './repository'
 
-違反すると、部分的な更新によるデータ不整合や、競合状態による二重処理が発生する。
+export async function transferMoney(
+  supabase: SupabaseClient,
+  fromAccountId: string,
+  toAccountId: string,
+  amount: number
+) {
+  // NG: 複数のクエリを順次実行している
+  // 途中で失敗すると、データが不整合な状態になる
+  await accountRepository.decreaseBalance(supabase, fromAccountId, amount)
+  await accountRepository.increaseBalance(supabase, toAccountId, amount)
+  await transactionRepository.create(supabase, {
+    fromAccountId,
+    toAccountId,
+    amount,
+    status: 'completed',
+  })
+}
+```
 
 ## 例外
 

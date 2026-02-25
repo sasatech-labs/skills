@@ -10,29 +10,15 @@ tags: [adapter, error, apperror, external-api]
 
 Adapter層は外部APIのエラーをキャッチし、`AppError`に変換してスローする。外部APIのエラーをそのまま上位層に伝搬しない。
 
-## NG例
+## 理由
 
-```typescript
-// src/lib/adapters/stripe/index.ts
-// NG: 外部APIのエラーをそのままスロー
-export const stripeAdapter = {
-  async createPaymentIntent(input: CreatePaymentIntentInput): Promise<PaymentIntent> {
-    // try-catchなし — Stripe固有のエラーがService層に漏れる
-    const intent = await stripe.paymentIntents.create({
-      amount: input.amount,
-      currency: input.currency ?? 'jpy',
-    })
+外部APIのエラーをそのまま伝搬すると、以下の問題が発生する：
 
-    return {
-      id: intent.id,
-      amount: intent.amount,
-      currency: intent.currency,
-      status: intent.status,
-      clientSecret: intent.client_secret!,
-    }
-  },
-}
-```
+1. **エラー形式の不統一**: 外部サービスごとに異なるエラー形式がService層に漏れ、一貫したエラーハンドリングができない
+2. **HTTPステータスの不適切な変換**: 外部APIのエラーコードとアプリケーションのHTTPステータスは1対1対応しない場合がある
+3. **外部依存の露出**: 外部サービスのエラー詳細がクライアントに漏れるセキュリティリスクがある
+
+`AppError`に統一することで、Service層は外部サービスのエラー形式を意識する必要がなくなり、`withHTTPError`が一貫したHTTPレスポンスに変換できる。
 
 ## OK例
 
@@ -137,15 +123,29 @@ export const resendAdapter = {
 }
 ```
 
-## 理由
+## NG例
 
-外部APIのエラーをそのまま伝搬すると、以下の問題が発生する：
+```typescript
+// src/lib/adapters/stripe/index.ts
+// NG: 外部APIのエラーをそのままスロー
+export const stripeAdapter = {
+  async createPaymentIntent(input: CreatePaymentIntentInput): Promise<PaymentIntent> {
+    // try-catchなし — Stripe固有のエラーがService層に漏れる
+    const intent = await stripe.paymentIntents.create({
+      amount: input.amount,
+      currency: input.currency ?? 'jpy',
+    })
 
-1. **エラー形式の不統一**: 外部サービスごとに異なるエラー形式がService層に漏れ、一貫したエラーハンドリングができない
-2. **HTTPステータスの不適切な変換**: 外部APIのエラーコードとアプリケーションのHTTPステータスは1対1対応しない場合がある
-3. **外部依存の露出**: 外部サービスのエラー詳細がクライアントに漏れるセキュリティリスクがある
-
-`AppError`に統一することで、Service層は外部サービスのエラー形式を意識する必要がなくなり、`withHTTPError`が一貫したHTTPレスポンスに変換できる。
+    return {
+      id: intent.id,
+      amount: intent.amount,
+      currency: intent.currency,
+      status: intent.status,
+      clientSecret: intent.client_secret!,
+    }
+  },
+}
+```
 
 ## 参照
 

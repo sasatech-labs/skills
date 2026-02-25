@@ -10,43 +10,15 @@ tags: [architecture, authentication, handler, service]
 
 SignOut、SignInWithOTPなどの認証操作は、Service層に実装する。Handler層は`supabase.auth.signOut()`や`supabase.auth.signInWithOtp()`を直接呼び出さない。
 
-## NG例
+## 理由
 
-```typescript
-// src/features/auth/core/handler.ts
-// NG: Handler層で認証操作を直接実行している
-export const handleSignOut = withHTTPError(async (request) => {
-  const supabase = await createClient()
+認証操作をService層に配置する理由は以下の通りである：
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw AppError.unauthorized()
+1. **責務分離**: 認証操作はビジネスロジックの一部である。Handler層の責務はリクエスト/レスポンスの境界処理に限定する
+2. **一貫性**: 他のビジネスロジック（CRUD操作、決済処理など）と同様に、認証操作もService層経由で実行することで、レイヤー構成の一貫性を保つ
+3. **テスタビリティ**: Service層に分離することで、認証操作のテストをHTTPリクエストから独立して実行できる
 
-  // 問題: Handler層でsupabase.auth.signOut()を直接呼び出している
-  const { error } = await supabase.auth.signOut()
-  if (error) throw new AppError(error.message, 500)
-
-  return AppResponse.noContent()
-})
-```
-
-```typescript
-// src/features/auth/core/handler.ts
-// NG: Handler層でOTPサインインを直接実行している
-export const handleSignInWithOTP = withHTTPError(async (request) => {
-  const validation = await validateBody(request, signInWithOTPSchema)
-  if (!validation.success) return validation.response
-
-  const supabase = await createClient()
-
-  // 問題: Handler層でsupabase.auth.signInWithOtp()を直接呼び出している
-  const { error } = await supabase.auth.signInWithOtp({
-    email: validation.data.email,
-  })
-  if (error) throw new AppError(error.message, 500)
-
-  return AppResponse.ok({ message: 'OTP sent successfully' })
-})
-```
+違反すると、Handler層にビジネスロジックが混入し、レイヤー間の責務境界が曖昧になる。
 
 ## OK例
 
@@ -117,15 +89,43 @@ export const signOut = _signOut
 export const signInWithOTP = _signInWithOTP
 ```
 
-## 理由
+## NG例
 
-認証操作をService層に配置する理由は以下の通りである：
+```typescript
+// src/features/auth/core/handler.ts
+// NG: Handler層で認証操作を直接実行している
+export const handleSignOut = withHTTPError(async (request) => {
+  const supabase = await createClient()
 
-1. **責務分離**: 認証操作はビジネスロジックの一部である。Handler層の責務はリクエスト/レスポンスの境界処理に限定する
-2. **一貫性**: 他のビジネスロジック（CRUD操作、決済処理など）と同様に、認証操作もService層経由で実行することで、レイヤー構成の一貫性を保つ
-3. **テスタビリティ**: Service層に分離することで、認証操作のテストをHTTPリクエストから独立して実行できる
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw AppError.unauthorized()
 
-違反すると、Handler層にビジネスロジックが混入し、レイヤー間の責務境界が曖昧になる。
+  // 問題: Handler層でsupabase.auth.signOut()を直接呼び出している
+  const { error } = await supabase.auth.signOut()
+  if (error) throw new AppError(error.message, 500)
+
+  return AppResponse.noContent()
+})
+```
+
+```typescript
+// src/features/auth/core/handler.ts
+// NG: Handler層でOTPサインインを直接実行している
+export const handleSignInWithOTP = withHTTPError(async (request) => {
+  const validation = await validateBody(request, signInWithOTPSchema)
+  if (!validation.success) return validation.response
+
+  const supabase = await createClient()
+
+  // 問題: Handler層でsupabase.auth.signInWithOtp()を直接呼び出している
+  const { error } = await supabase.auth.signInWithOtp({
+    email: validation.data.email,
+  })
+  if (error) throw new AppError(error.message, 500)
+
+  return AppResponse.ok({ message: 'OTP sent successfully' })
+})
+```
 
 ## 参照
 

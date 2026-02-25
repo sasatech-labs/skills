@@ -10,24 +10,15 @@ tags: [architecture, adapter, feature, isolation, dependency]
 
 Feature内のAdapterは、他のFeatureの内部Adapterに依存しない。共通処理のAdapter（`src/lib/adapters/`）のみをインポートする。
 
-## NG例
+## 理由
 
-```typescript
-// src/features/orders/core/adapter.ts
-// NG: 他のFeatureの内部Adapterをインポートしている
-import { warehouseAdapter } from '@/features/inventory/core/adapter'
+Feature内のAdapterは内部実装であり、他のFeatureから直接参照することを禁止する理由は以下の通りである：
 
-export const orderFulfillmentAdapter = {
-  async fulfillOrder(orderId: string) {
-    // NG: inventoryFeatureの内部実装に依存している
-    const allocation = await warehouseAdapter.allocateStock({
-      orderId,
-      priority: 'normal',
-    })
-    // ...
-  },
-}
-```
+1. **Feature間の疎結合**: Feature内のAdapterは内部実装であり、公開APIではない。他のFeatureが直接依存すると、内部実装の変更がFeature境界を超えて波及する
+2. **カプセル化の維持**: Featureの内部構造（Adapter, Repository）はService関数を通じてのみアクセスする。Adapterへの直接依存はカプセル化を破壊する
+3. **依存方向の統一**: Feature間の依存はService関数（公開API）を経由するという原則を維持する。Adapter間の直接依存は、この原則に反する隠れた依存関係を作成する
+
+違反すると、Feature間の暗黙的な結合が発生し、独立した変更やテストが困難になる。
 
 ## OK例
 
@@ -76,15 +67,24 @@ export async function allocateStock(
 }
 ```
 
-## 理由
+## NG例
 
-Feature内のAdapterは内部実装であり、他のFeatureから直接参照することを禁止する理由は以下の通りである：
+```typescript
+// src/features/orders/core/adapter.ts
+// NG: 他のFeatureの内部Adapterをインポートしている
+import { warehouseAdapter } from '@/features/inventory/core/adapter'
 
-1. **Feature間の疎結合**: Feature内のAdapterは内部実装であり、公開APIではない。他のFeatureが直接依存すると、内部実装の変更がFeature境界を超えて波及する
-2. **カプセル化の維持**: Featureの内部構造（Adapter, Repository）はService関数を通じてのみアクセスする。Adapterへの直接依存はカプセル化を破壊する
-3. **依存方向の統一**: Feature間の依存はService関数（公開API）を経由するという原則を維持する。Adapter間の直接依存は、この原則に反する隠れた依存関係を作成する
-
-違反すると、Feature間の暗黙的な結合が発生し、独立した変更やテストが困難になる。
+export const orderFulfillmentAdapter = {
+  async fulfillOrder(orderId: string) {
+    // NG: inventoryFeatureの内部実装に依存している
+    const allocation = await warehouseAdapter.allocateStock({
+      orderId,
+      priority: 'normal',
+    })
+    // ...
+  },
+}
+```
 
 ## 参照
 

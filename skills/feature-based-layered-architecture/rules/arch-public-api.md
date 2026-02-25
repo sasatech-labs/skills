@@ -10,29 +10,15 @@ tags: [architecture, feature, module, exports, public-api]
 
 Featureの公開APIは`index.server.ts`と`index.client.ts`の2ファイルで管理する。`server-only`が必要なサーバー専用コード（Service関数、Handler関数）と、クライアントでも使用可能なコード（Fetcher関数、型）を分離する。Repository、Adapter、内部実装はどちらからもexportしない。
 
-## NG例
+## 理由
 
-```typescript
-// src/features/products/index.ts
-// NG: server-only対象とクライアント対象を同一ファイルからexportしている
-export { getProducts, createProduct } from './core/service'
-export { handleGetProducts, handleCreateProduct } from './core/handler'
-export { productsFetcher } from './core/fetcher'
-export { productRepository } from './core/repository'  // NG: 内部実装の公開
-export type { Product, CreateProductInput } from './core/schema'
-```
+公開APIを制御することで、以下の効果がある：
 
-```typescript
-// NG: 他のFeatureからRepositoryを直接参照
-// src/features/orders/core/service.ts
-import { productRepository } from '@/features/products/index.server'  // NG: Feature境界を越えた内部参照
+1. **カプセル化**: 内部実装の変更がFeature外に影響しない
+2. **依存関係の明確化**: Feature間の依存がService関数と型に限定され、依存グラフが明確になる
+3. **リファクタリングの安全性**: Repository構造やAdapter実装を変更しても、公開APIが変わらなければ他のFeatureに影響しない
 
-export async function createOrder(supabase: SupabaseClient, input: CreateOrderInput) {
-  // 他のFeatureのRepositoryを直接呼び出している
-  const product = await productRepository.findById(supabase, input.productId)
-  // ...
-}
-```
+内部実装を公開すると、Feature間の結合度が高まり、変更の影響範囲が予測困難になる。
 
 ## OK例
 
@@ -74,15 +60,29 @@ export async function createOrder(supabase: SupabaseClient, input: CreateOrderIn
 import type { Product } from '@/features/products/index.client'  // OK: クライアント用公開APIを使用
 ```
 
-## 理由
+## NG例
 
-公開APIを制御することで、以下の効果がある：
+```typescript
+// src/features/products/index.ts
+// NG: server-only対象とクライアント対象を同一ファイルからexportしている
+export { getProducts, createProduct } from './core/service'
+export { handleGetProducts, handleCreateProduct } from './core/handler'
+export { productsFetcher } from './core/fetcher'
+export { productRepository } from './core/repository'  // NG: 内部実装の公開
+export type { Product, CreateProductInput } from './core/schema'
+```
 
-1. **カプセル化**: 内部実装の変更がFeature外に影響しない
-2. **依存関係の明確化**: Feature間の依存がService関数と型に限定され、依存グラフが明確になる
-3. **リファクタリングの安全性**: Repository構造やAdapter実装を変更しても、公開APIが変わらなければ他のFeatureに影響しない
+```typescript
+// NG: 他のFeatureからRepositoryを直接参照
+// src/features/orders/core/service.ts
+import { productRepository } from '@/features/products/index.server'  // NG: Feature境界を越えた内部参照
 
-内部実装を公開すると、Feature間の結合度が高まり、変更の影響範囲が予測困難になる。
+export async function createOrder(supabase: SupabaseClient, input: CreateOrderInput) {
+  // 他のFeatureのRepositoryを直接呼び出している
+  const product = await productRepository.findById(supabase, input.productId)
+  // ...
+}
+```
 
 ## 公開APIの構成
 

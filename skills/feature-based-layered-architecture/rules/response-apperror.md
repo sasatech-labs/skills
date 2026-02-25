@@ -10,32 +10,15 @@ tags: [error, exception, service, repository]
 
 Service層、Repository層、Adapter層では`AppError`クラスでエラーをスローする。生の`Error`は使用しない。Adapter層のエラー変換パターンの詳細は[response-adapter-errors](response-adapter-errors.md)を参照。
 
-## NG例
+## 理由
 
-```typescript
-// Repository
-async findById(supabase: SupabaseClient, id: string) {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('id', id)
-    .single()
+生の `Error` を使用すると、以下の問題が発生する：
 
-  // 生の Error - HTTP ステータスコードが伝わらない
-  if (error) throw new Error(error.message)
-  return data
-}
+1. **HTTP ステータスコードが伝わらない**: Handler 層でエラーの種類（404, 403, 400など）を判別できず、適切なレスポンスを返せない
+2. **エラーコードの欠如**: クライアント側でエラーの種類を識別できず、適切なエラーハンドリングができない
+3. **一貫性の欠如**: エラー処理の実装が各所で異なり、保守性が低下する
 
-// Service
-async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
-  const post = await postRepository.findById(supabase, postId)
-
-  // 生の Error
-  if (post.userId !== userId) {
-    throw new Error('権限がありません')
-  }
-}
-```
+`AppError`を使用することで、Service/Repository/Adapter層からのHTTPステータスコードとエラーコードがHandler層まで伝播し、一貫したエラーレスポンスを実現できる。
 
 ## OK例
 
@@ -73,15 +56,32 @@ async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
 }
 ```
 
-## 理由
+## NG例
 
-生の `Error` を使用すると、以下の問題が発生する：
+```typescript
+// Repository
+async findById(supabase: SupabaseClient, id: string) {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single()
 
-1. **HTTP ステータスコードが伝わらない**: Handler 層でエラーの種類（404, 403, 400など）を判別できず、適切なレスポンスを返せない
-2. **エラーコードの欠如**: クライアント側でエラーの種類を識別できず、適切なエラーハンドリングができない
-3. **一貫性の欠如**: エラー処理の実装が各所で異なり、保守性が低下する
+  // 生の Error - HTTP ステータスコードが伝わらない
+  if (error) throw new Error(error.message)
+  return data
+}
 
-`AppError`を使用することで、Service/Repository/Adapter層からのHTTPステータスコードとエラーコードがHandler層まで伝播し、一貫したエラーレスポンスを実現できる。
+// Service
+async publishPost(supabase: SupabaseClient, postId: string, userId: string) {
+  const post = await postRepository.findById(supabase, postId)
+
+  // 生の Error
+  if (post.userId !== userId) {
+    throw new Error('権限がありません')
+  }
+}
+```
 
 ## Handler でのエラーハンドリング
 

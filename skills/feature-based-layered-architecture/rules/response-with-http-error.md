@@ -10,6 +10,45 @@ tags: [handler, error, response, wrapper]
 
 Handler関数は`withHTTPError`でラップする。手動のtry-catch、`handleApiError`、inline AppError switchは使用しない。
 
+## 理由
+
+1. **ボイラープレート排除**: 全Handler関数で繰り返されるtry-catch + エラー判定パターンを一箇所に集約する
+2. **一貫性の保証**: エラーレスポンスの形式が統一され、AppErrorのstatusCodeとcodeが確実にHTTPレスポンス(error_codeキー)に反映される
+3. **保守性の向上**: エラーハンドリングのロジック変更が1ファイルで完結する
+
+## OK例
+
+```typescript
+import { withHTTPError } from '@/lib/with-http-error'
+
+// OK: withHTTPErrorでラップ
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return AppResponse.ok(products)
+})
+
+// OK: バリデーション付き
+export const handleCreateProduct = withHTTPError(async (request) => {
+  const validation = await validateBody(request, createProductSchema)
+  if (!validation.success) {
+    return validation.response
+  }
+
+  const supabase = await createClient()
+  const product = await createProduct(supabase, validation.data)
+  return AppResponse.created(product)
+})
+
+// OK: パラメータ付き
+export const handleGetProduct = withHTTPError(async (request, context) => {
+  const { id } = await context.params
+  const supabase = await createClient()
+  const product = await getProduct(supabase, id)
+  return AppResponse.ok(product)
+})
+```
+
 ## NG例
 
 ### 手動try-catch
@@ -65,45 +104,6 @@ export async function handleCreateProduct(request: NextRequest) {
   }
 }
 ```
-
-## OK例
-
-```typescript
-import { withHTTPError } from '@/lib/with-http-error'
-
-// OK: withHTTPErrorでラップ
-export const handleGetProducts = withHTTPError(async (request) => {
-  const supabase = await createClient()
-  const products = await getProducts(supabase)
-  return AppResponse.ok(products)
-})
-
-// OK: バリデーション付き
-export const handleCreateProduct = withHTTPError(async (request) => {
-  const validation = await validateBody(request, createProductSchema)
-  if (!validation.success) {
-    return validation.response
-  }
-
-  const supabase = await createClient()
-  const product = await createProduct(supabase, validation.data)
-  return AppResponse.created(product)
-})
-
-// OK: パラメータ付き
-export const handleGetProduct = withHTTPError(async (request, context) => {
-  const { id } = await context.params
-  const supabase = await createClient()
-  const product = await getProduct(supabase, id)
-  return AppResponse.ok(product)
-})
-```
-
-## 理由
-
-1. **ボイラープレート排除**: 全Handler関数で繰り返されるtry-catch + エラー判定パターンを一箇所に集約する
-2. **一貫性の保証**: エラーレスポンスの形式が統一され、AppErrorのstatusCodeとcodeが確実にHTTPレスポンス(error_codeキー)に反映される
-3. **保守性の向上**: エラーハンドリングのロジック変更が1ファイルで完結する
 
 ## 例外
 

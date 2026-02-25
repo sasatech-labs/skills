@@ -39,22 +39,24 @@ Supabase の接続情報や API キーなど、機密性のある環境変数に
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe 公開鍵 |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN（公開可） |
 
-## NG例
+## 理由
 
-```bash
-# .env.local
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-NEXT_PUBLIC_STRIPE_SECRET_KEY=sk_live_xxx  # 機密情報がクライアントバンドルに含まれる
-```
+### セキュリティリスク
 
-```typescript
-// クライアントから直接アクセス可能になる
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-```
+`NEXT_PUBLIC_` 付きの環境変数はクライアントバンドルに含まれ、ブラウザの DevTools で誰でも確認できる。機密情報が露出すると、以下のリスクが発生する:
+
+- API キーの不正使用
+- RLS（Row Level Security）をバイパスした攻撃
+- データベースへの直接アクセス
+- 課金対象サービスの不正利用
+
+### 判断基準
+
+`NEXT_PUBLIC_` を付けるかどうかの判断:
+
+1. **その値が漏れても問題ないか** → 問題あれば `NEXT_PUBLIC_` を使用しない
+2. **ブラウザの DevTools で見られても良いか** → 不可なら `NEXT_PUBLIC_` を使用しない
+3. **公開鍵か秘密鍵か** → 秘密鍵は `NEXT_PUBLIC_` を使用しない
 
 ## OK例
 
@@ -102,24 +104,22 @@ export async function createClient() {
 }
 ```
 
-## 理由
+## NG例
 
-### セキュリティリスク
+```bash
+# .env.local
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_STRIPE_SECRET_KEY=sk_live_xxx  # 機密情報がクライアントバンドルに含まれる
+```
 
-`NEXT_PUBLIC_` 付きの環境変数はクライアントバンドルに含まれ、ブラウザの DevTools で誰でも確認できる。機密情報が露出すると、以下のリスクが発生する:
-
-- API キーの不正使用
-- RLS（Row Level Security）をバイパスした攻撃
-- データベースへの直接アクセス
-- 課金対象サービスの不正利用
-
-### 判断基準
-
-`NEXT_PUBLIC_` を付けるかどうかの判断:
-
-1. **その値が漏れても問題ないか** → 問題あれば `NEXT_PUBLIC_` を使用しない
-2. **ブラウザの DevTools で見られても良いか** → 不可なら `NEXT_PUBLIC_` を使用しない
-3. **公開鍵か秘密鍵か** → 秘密鍵は `NEXT_PUBLIC_` を使用しない
+```typescript
+// クライアントから直接アクセス可能になる
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+```
 
 ## 代替アプローチ
 

@@ -10,14 +10,17 @@ tags: [testing, server-only, setup]
 
 `server-only`パッケージはテスト環境で無効化する。`vitest.setup.ts`でグローバルにモックする。
 
-## NG例
+## 理由
+
+`server-only`パッケージは、サーバー専用コードがクライアントにバンドルされることを防ぐ。テスト環境はNode.jsで実行されるため、この制約を無効化する必要がある。モックを設定しないとテスト実行時にエラーが発生し、コード品質と一貫性が低下する。
 
 ```typescript
-// vitest.setup.ts
-// server-only のモックがない
+// src/features/products/core/service.ts
+import 'server-only'  // テスト時にエラーになる
 
-// テスト実行時にエラーが発生する
-// Error: This module cannot be imported from a Client Component module.
+export async function getProducts(supabase: SupabaseClient) {
+  // ...
+}
 ```
 
 ## OK例
@@ -30,17 +33,14 @@ import { vi } from 'vitest'
 vi.mock('server-only', () => ({}))
 ```
 
-## 理由
-
-`server-only`パッケージは、サーバー専用コードがクライアントにバンドルされることを防ぐ。テスト環境はNode.jsで実行されるため、この制約を無効化する必要がある。モックを設定しないとテスト実行時にエラーが発生し、コード品質と一貫性が低下する。
+## NG例
 
 ```typescript
-// src/features/products/core/service.ts
-import 'server-only'  // テスト時にエラーになる
+// vitest.setup.ts
+// server-only のモックがない
 
-export async function getProducts(supabase: SupabaseClient) {
-  // ...
-}
+// テスト実行時にエラーが発生する
+// Error: This module cannot be imported from a Client Component module.
 ```
 
 ## 推奨セットアップ

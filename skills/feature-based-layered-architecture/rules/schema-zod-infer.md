@@ -10,38 +10,13 @@ tags: [schema, types, zod, validation]
 
 Input 型は Zod スキーマから `z.infer` で導出する。手動で型定義しない。
 
-## NG例
+## 理由
 
-```typescript
-// schema.ts
-export const createProductSchema = z.object({
-  name: z.string().min(1),
-  price: z.number().min(0),
-  description: z.string().optional(),
-})
+手動で型定義を行うと、スキーマと型定義が乖離するリスクがある。スキーマのバリデーションルールを変更した際に、型定義の更新を忘れると、実行時エラーや予期しない動作を引き起こす可能性がある。
 
-// NG: 手動で型定義している
-// スキーマの変更時に型定義の更新を忘れる可能性がある
-export type CreateProductInput = {
-  name: string
-  price: number
-  description?: string
-}
-```
+`z.infer` を使用することで、スキーマが唯一の情報源（Single Source of Truth）となり、型定義とバリデーションルールが常に同期する。これにより、コードの一貫性と保守性が向上する。
 
-```typescript
-// NG: create と update で同じフィールドを重複定義している
-// 変更時に両方を修正する必要があり、保守性が低い
-export const createProductSchema = z.object({
-  name: z.string().min(1),
-  price: z.number().min(0),
-})
-
-export const updateProductSchema = z.object({
-  name: z.string().min(1).optional(),
-  price: z.number().min(0).optional(),
-})
-```
+また、`partial()` や `pick()`、`omit()` などのZodのユーティリティメソッドを活用することで、スキーマの重複を避け、DRY原則に従った実装が可能になる。
 
 ## OK例
 
@@ -107,10 +82,35 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>
 export type ProductSearchParams = z.infer<typeof productSearchSchema>
 ```
 
-## 理由
+## NG例
 
-手動で型定義を行うと、スキーマと型定義が乖離するリスクがある。スキーマのバリデーションルールを変更した際に、型定義の更新を忘れると、実行時エラーや予期しない動作を引き起こす可能性がある。
+```typescript
+// schema.ts
+export const createProductSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().min(0),
+  description: z.string().optional(),
+})
 
-`z.infer` を使用することで、スキーマが唯一の情報源（Single Source of Truth）となり、型定義とバリデーションルールが常に同期する。これにより、コードの一貫性と保守性が向上する。
+// NG: 手動で型定義している
+// スキーマの変更時に型定義の更新を忘れる可能性がある
+export type CreateProductInput = {
+  name: string
+  price: number
+  description?: string
+}
+```
 
-また、`partial()` や `pick()`、`omit()` などのZodのユーティリティメソッドを活用することで、スキーマの重複を避け、DRY原則に従った実装が可能になる。
+```typescript
+// NG: create と update で同じフィールドを重複定義している
+// 変更時に両方を修正する必要があり、保守性が低い
+export const createProductSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().min(0),
+})
+
+export const updateProductSchema = z.object({
+  name: z.string().min(1).optional(),
+  price: z.number().min(0).optional(),
+})
+```

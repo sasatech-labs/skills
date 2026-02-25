@@ -10,28 +10,15 @@ tags: [data-access, pagination, repository, api, security]
 
 リスト取得APIは必ずページネーションを実装する。Repository層で上限なしの全件取得を行わない。サーバー側で`MAX_LIMIT`による上限を強制する。
 
-## NG例
+## 理由
 
-```typescript
-// Handler - NG: ページネーションなしで全件返却
-export const handleGetProducts = withHTTPError(async (request) => {
-  const supabase = await createClient()
-  const products = await getProducts(supabase)
-  return AppResponse.ok(products)
-})
+全件取得はデータ量の増加に伴いメモリ枯渇やDoS脆弱性を招く。サーバー側で`MAX_LIMIT`による上限を強制し、ページネーションを実装することで以下を実現する：
 
-// Repository - NG: 上限なしの全件取得
-async findMany(supabase: SupabaseClient): Promise<Product[]> {
-  const { data } = await supabase.from('products').select('*')
-  return data ?? []
-}
-
-// Repository - NG: クライアントのlimitをそのまま使用
-async findMany(supabase: SupabaseClient, limit: number) {
-  // limit=10000 が来たらそのまま10000件取得してしまう
-  return supabase.from('products').select('*').limit(limit)
-}
-```
+- データ取得量の制限によるパフォーマンス向上
+- 悪意ある大量リクエストの防止
+- クライアント側での段階的なデータ表示
+- データベース負荷の軽減
+- 総件数の提供によるUI/UX改善
 
 ## OK例
 
@@ -126,15 +113,28 @@ export type PaginatedResult<T> = {
 }
 ```
 
-## 理由
+## NG例
 
-全件取得はデータ量の増加に伴いメモリ枯渇やDoS脆弱性を招く。サーバー側で`MAX_LIMIT`による上限を強制し、ページネーションを実装することで以下を実現する：
+```typescript
+// Handler - NG: ページネーションなしで全件返却
+export const handleGetProducts = withHTTPError(async (request) => {
+  const supabase = await createClient()
+  const products = await getProducts(supabase)
+  return AppResponse.ok(products)
+})
 
-- データ取得量の制限によるパフォーマンス向上
-- 悪意ある大量リクエストの防止
-- クライアント側での段階的なデータ表示
-- データベース負荷の軽減
-- 総件数の提供によるUI/UX改善
+// Repository - NG: 上限なしの全件取得
+async findMany(supabase: SupabaseClient): Promise<Product[]> {
+  const { data } = await supabase.from('products').select('*')
+  return data ?? []
+}
+
+// Repository - NG: クライアントのlimitをそのまま使用
+async findMany(supabase: SupabaseClient, limit: number) {
+  // limit=10000 が来たらそのまま10000件取得してしまう
+  return supabase.from('products').select('*').limit(limit)
+}
+```
 
 ## 例外
 

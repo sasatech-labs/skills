@@ -10,38 +10,15 @@ tags: [schema, types, zod, feature-structure]
 
 Feature内の型定義は`schema.ts`に集約する。`types.ts`は作成しない。
 
-## NG例
+## 理由
 
-型定義が分散し、同期が困難になる。
+型定義の分散は以下の問題を引き起こす。
 
-```plaintext
-src/features/products/
-├── schema.ts         # Zodスキーマのみ
-├── types.ts          # 別ファイルに型定義
-├── service.ts
-└── repository.ts
-```
+1. **不整合のリスク**: `schema.ts`と`types.ts`を手動で同期する必要があり、更新漏れが発生する
+2. **保守性の低下**: 型を変更する際に複数ファイルを修正する必要がある
+3. **Single Source of Truthの違反**: 同じデータ構造が複数箇所で定義される
 
-```typescript
-// schema.ts
-export const createProductSchema = z.object({
-  name: z.string(),
-  price: z.number(),
-})
-
-// types.ts - 重複した型定義（NG: schema.tsと手動で同期が必要）
-export type Product = {
-  id: string
-  name: string
-  price: number
-}
-
-// NG: Zodスキーマと重複した型定義
-export type CreateProductInput = {
-  name: string
-  price: number
-}
-```
+`schema.ts`に一元化し、`z.infer`で型を自動導出することで、整合性を保証し、保守性を向上させる。
 
 ## OK例
 
@@ -80,15 +57,38 @@ export type CreateProductInput = z.infer<typeof createProductSchema>
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
 ```
 
-## 理由
+## NG例
 
-型定義の分散は以下の問題を引き起こす。
+型定義が分散し、同期が困難になる。
 
-1. **不整合のリスク**: `schema.ts`と`types.ts`を手動で同期する必要があり、更新漏れが発生する
-2. **保守性の低下**: 型を変更する際に複数ファイルを修正する必要がある
-3. **Single Source of Truthの違反**: 同じデータ構造が複数箇所で定義される
+```plaintext
+src/features/products/
+├── schema.ts         # Zodスキーマのみ
+├── types.ts          # 別ファイルに型定義
+├── service.ts
+└── repository.ts
+```
 
-`schema.ts`に一元化し、`z.infer`で型を自動導出することで、整合性を保証し、保守性を向上させる。
+```typescript
+// schema.ts
+export const createProductSchema = z.object({
+  name: z.string(),
+  price: z.number(),
+})
+
+// types.ts - 重複した型定義（NG: schema.tsと手動で同期が必要）
+export type Product = {
+  id: string
+  name: string
+  price: number
+}
+
+// NG: Zodスキーマと重複した型定義
+export type CreateProductInput = {
+  name: string
+  price: number
+}
+```
 
 ## 補足
 
